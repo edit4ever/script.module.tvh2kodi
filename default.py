@@ -270,9 +270,9 @@ def dvr_file_param_edit(dvr_uuid_sel, dvr_file_info_list, dvr_day_dir, dvr_chann
             if sel_enabled >= 0:
                 dvr_windows_title = truefalse[sel_enabled]
                 param_update = '"windows-compatible-filenames":' + dvr_windows_title
-    param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/save?node={' + param_update + ',"uuid":"' + dvr_uuid_sel + '"}'
-    param_save = requests.get(param_url)
-    dvr_file_param_load(dvr_uuid_sel)
+        param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/save?node={' + param_update + ',"uuid":"' + dvr_uuid_sel + '"}'
+        param_save = requests.get(param_url)
+        dvr_file_param_load(dvr_uuid_sel)
 
 def mux_param_load_atsct(mux_uuid_sel):
     mux_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/load?uuid=' + mux_uuid_sel
@@ -1334,14 +1334,17 @@ def dvr():
     dvr_config_name = []
     dvr_config_uuid = []
     for dvr_n in dvr_config['entries']:
-        dvr_config_name.append(dvr_n['name'])
+        if dvr_n['name'] == "":
+            dvr_n = "(Default profile)"
+        dvr_config_name.append(dvr_n)
     for dvr_u in dvr_config['entries']:
         dvr_config_uuid.append(dvr_u['uuid'])
-    if len(dvr_config_name) == 1:
-        dvr_uuid_sel = dvr_config['entries'][0]['uuid']
+    sel_dvr = dialog.select('Select a DVR configuration to edit', list=dvr_config_name)
+    if sel_dvr < 0:
+        return
+    if sel_dvr >= 0:
+        dvr_uuid_sel = dvr_config_uuid[sel_dvr]
         dvr_param_load(dvr_uuid_sel)
-    else:
-        sel_dvr = dialog.select('Select a DVR configuration to edit', list=dvr_config_name)
 
 @plugin.route('/epg')
 def epg():
