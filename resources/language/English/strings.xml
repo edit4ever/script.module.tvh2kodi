@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<strings>
+	<string id="32000">Tvheadend Backend</string>
+	<string id="32010">IP address</string>
+	<string id="32020">Port</string>
+	<string id="32030">DVR Recording Path</string>
+</strings>
