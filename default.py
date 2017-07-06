@@ -207,7 +207,7 @@ def dvr_file_param_load(dvr_uuid_sel):
 def dvr_file_param_edit(dvr_uuid_sel, dvr_file_info_list, dvr_day_dir, dvr_channel_dir, dvr_title_dir, dvr_channel_title, dvr_date_title, dvr_time_title, dvr_episode_title, dvr_subtitle_title, dvr_omit_title, dvr_clean_title, dvr_whitespace_title, dvr_windows_title):
     sel_param = dialog.select('DVR File and Folder Options - Select parameter to edit', list=dvr_file_info_list)
     if sel_param < 0:
-        dvr_param_load(dvr_uuid_sel)
+        return
     if sel_param >= 0:
         param_update = ""
         if sel_param == 0:
@@ -798,7 +798,7 @@ def adapt_param_load(adapter_uuid_sel):
 def adapt_param_edit(adapter_uuid_sel, adapt_info_list, adapt_enabled, adapt_name, adapt_network, adapt_priority, adapt_otaepg, adapt_init, adapt_idle):
     sel_param = dialog.select('Adapters Configuration - Select parameter to edit', list=adapt_info_list)
     if sel_param < 0:
-        adapt_param_load(adapter_uuid_sel)
+        adapters()
     if sel_param >= 0:
         truefalse = ['true', 'false']
         enabledisable = ['Enabled', 'Disabled']
@@ -1191,6 +1191,8 @@ def adapters():
     adapters_full = zip(adapter_text, adapter_enabled)
     adapters_list = ["%s %s" % x for x in adapters_full]
     sel_adapter = dialog.select('Select which adapter you would like to configure', list=adapters_list)
+    if sel_adapter < 0:
+        return
     if sel_adapter >= 0:
         adapter_uuid_sel = adapter_uuid[sel_adapter]
         adapt_param_load(adapter_uuid_sel)
@@ -1340,8 +1342,6 @@ def dvr():
     for dvr_u in dvr_config['entries']:
         dvr_config_uuid.append(dvr_u['uuid'])
     sel_dvr = dialog.select('Select a DVR configuration to edit', list=dvr_config_name)
-    if sel_dvr < 0:
-        return
     if sel_dvr >= 0:
         dvr_uuid_sel = dvr_config_uuid[sel_dvr]
         dvr_param_load(dvr_uuid_sel)
