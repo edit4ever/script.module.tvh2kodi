@@ -1358,13 +1358,23 @@ def epg():
     epg_otainit = find_param(epg_load, 'ota_initial')
     epg_otacron = find_param(epg_load, 'ota_cron')
     epg_otatime = find_param(epg_load, 'ota_timeout')
-    epg_info_list = ["EDIT EPG GRABBER MODULES", "Update channel name: " + str(epg_rename), "Update channel number: " + str(epg_renumber), "Update channel icon: " + str(epg_reicon), "Periodically save EPG to disk (hours): " + str(epg_dbsave), "Internal Cron multi-line: " + str(epg_intcron), "Force initial OTA EPG grab at start-up: " + str(epg_otainit), "Over-the-air Cron multi-line: " + str(epg_otacron), "OTA EPG scan timeout in seconds (30-7200): " + str(epg_otatime)]
+    epg_info_list = ["EDIT EPG GRABBER MODULES", "TRIGGER OTA GRABBER", "RE-RUN INTERNAL GRABBER", "Update channel name: " + str(epg_rename), "Update channel number: " + str(epg_renumber), "Update channel icon: " + str(epg_reicon), "Periodically save EPG to disk (hours): " + str(epg_dbsave), "Internal Cron multi-line: " + str(epg_intcron), "Force initial OTA EPG grab at start-up: " + str(epg_otainit), "Over-the-air Cron multi-line: " + str(epg_otacron), "OTA EPG scan timeout in seconds (30-7200): " + str(epg_otatime)]
     sel_epg = dialog.select('Select an EPG Grabber configuration to edit', list=epg_info_list)
     if sel_epg < 0:
         return
     if sel_epg == 0:
         epgmod_list_load()
-    if sel_epg > 0:
+    if sel_epg == 1:
+        epg_run_ota_url = 'http://' + tvh_url + ':' + tvh_port + '/api/epggrab/ota/trigger?trigger=1'
+        epg_run_ota = requests.get(epg_run_ota_url).json()
+        if epg_run_ota == {}:
+            dialog.ok("OTA EPG grabber triggered", "You have initiated the OTA EPG grabber. Your epg should update once completed. Sometimes Kodi needs a restart in order to update the EPG display.")
+    if sel_epg == 2:
+        epg_run_int_url = 'http://' + tvh_url + ':' + tvh_port + '/api/epggrab/internal/rerun?rerun=1'
+        epg_run_int = requests.get(epg_run_int_url).json()
+        if epg_run_int == {}:
+            dialog.ok("Internal EPG grabber triggered", "You have initiated the internal EPG grabber. Your epg should update once completed. Sometimes Kodi needs a restart in order to update the EPG display.")
+    if sel_epg > 2 :
         epg_param(sel_epg, epg_rename, epg_renumber, epg_reicon, epg_dbsave, epg_intcron, epg_otainit, epg_otacron, epg_otatime)
 
 @plugin.route('/wizard')
