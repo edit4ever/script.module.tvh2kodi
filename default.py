@@ -182,9 +182,10 @@ def dvr_param_edit(dvr_uuid_sel, dvr_info_list, dvr_keep_key, dvr_keep_val, dvr_
                 param_update = '"profile":' + str(dvr_profile)
         if sel_param == 6:
             dvr_file_param_load(dvr_uuid_sel)
-        param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/save?node={' + param_update + ',"uuid":"' + dvr_uuid_sel + '"}'
-        param_save = requests.get(param_url)
-        dvr_param_load(dvr_uuid_sel)
+        if param_update != "":
+            param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/save?node={' + param_update + ',"uuid":"' + dvr_uuid_sel + '"}'
+            param_save = requests.get(param_url)
+            dvr_param_load(dvr_uuid_sel)
 
 def dvr_file_param_load(dvr_uuid_sel):
     dvr_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/load?uuid=' + dvr_uuid_sel
@@ -270,9 +271,10 @@ def dvr_file_param_edit(dvr_uuid_sel, dvr_file_info_list, dvr_day_dir, dvr_chann
             if sel_enabled >= 0:
                 dvr_windows_title = truefalse[sel_enabled]
                 param_update = '"windows-compatible-filenames":' + dvr_windows_title
-        param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/save?node={' + param_update + ',"uuid":"' + dvr_uuid_sel + '"}'
-        param_save = requests.get(param_url)
-        dvr_file_param_load(dvr_uuid_sel)
+        if param_update != "":
+            param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/save?node={' + param_update + ',"uuid":"' + dvr_uuid_sel + '"}'
+            param_save = requests.get(param_url)
+            dvr_file_param_load(dvr_uuid_sel)
 
 def mux_param_load_atsct(mux_uuid_sel):
     mux_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/load?uuid=' + mux_uuid_sel
@@ -335,7 +337,7 @@ def mux_param_edit_atsct(mux_uuid_sel, mux_info_list, mux_scanstate, mux_scansta
             delete_mux_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/delete?uuid=["' + mux_uuid_sel +'"]'
             delete_mux = requests.get(delete_mux_url)
             muxes()
-        if sel_param < 7:
+        if param_update != "":
             param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/save?node={' + param_update + ',"uuid":"' + mux_uuid_sel + '"}'
             param_save = requests.get(param_url)
             mux_param_load_atsct(mux_uuid_sel)
@@ -405,7 +407,7 @@ def mux_param_edit_atscc(mux_uuid_sel, mux_info_list, mux_scanstate, mux_scansta
             delete_mux_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/delete?uuid=["' + mux_uuid_sel +'"]'
             delete_mux = requests.get(delete_mux_url)
             muxes()
-        if sel_param < 8:
+        if param_update != "":
             param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/save?node={' + param_update + ',"uuid":"' + mux_uuid_sel + '"}'
             param_save = requests.get(param_url)
             mux_param_load_atscc(mux_uuid_sel)
@@ -523,7 +525,7 @@ def mux_param_edit_dvbt(mux_uuid_sel, mux_info_list, mux_plp_id, mux_fec_lo, mux
             delete_mux_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/delete?uuid=["' + mux_uuid_sel +'"]'
             delete_mux = requests.get(delete_mux_url)
             muxes()
-        if sel_param < 14:
+        if param_update != "":
             param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/save?node={' + param_update + ',"uuid":"' + mux_uuid_sel + '"}'
             param_save = requests.get(param_url)
             mux_param_load_dvbt(mux_uuid_sel)
@@ -640,56 +642,58 @@ def ch_param_edit(ch_uuid_sel, ch_info_list, ch_enabled, ch_autoname, ch_name, c
             delete_ch_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/delete?uuid=["' + ch_uuid_sel +'"]'
             delete_ch = requests.get(delete_ch_url)
             channels()
-        if sel_param < 6:
+        if param_update != "":
             param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/save?node={' + param_update + ',"uuid":"' + ch_uuid_sel + '"}'
             param_save = requests.get(param_url)
             ch_param_load(ch_uuid_sel)
 
 
 def epg_param(sel_epg, epg_rename, epg_renumber, epg_reicon, epg_dbsave, epg_intcron, epg_otainit, epg_otacron, epg_otatime):
-    if sel_epg == 1:
+    param_update = ""
+    if sel_epg == 3:
         sel_epg_rename = dialog.select('Update channel name with EPG provider name', list=enabledisable)
         if sel_epg_rename >= 0:
             epg_rename = truefalse[sel_epg_rename]
             param_update = '"channel_rename":' + epg_rename
-    if sel_epg == 2:
+    if sel_epg == 4:
         sel_epg_renumber = dialog.select('Update channel number with EPG provider number', list=enabledisable)
         if sel_epg_renumber >= 0:
             epg_renumber = truefalse[sel_epg_renumber]
             param_update = '"channel_renumber":' + epg_renumber
-    if sel_epg == 3:
+    if sel_epg == 5:
         sel_epg_reicon = dialog.select('Update channel icon with EPG provider icon', list=enabledisable)
         if sel_epg_reicon >= 0:
             epg_reicon = truefalse[sel_epg_reicon]
             param_update = '"channel_reicon":' + epg_reicon
-    if sel_epg == 4:
+    if sel_epg == 6:
         sel_epg_dbsave = dialog.input('Save EPG data to disk every X hours (set 0 to disable)', defaultt=str(epg_dbsave),type=xbmcgui.INPUT_NUMERIC)
         if sel_epg_dbsave == "":
             sel_epg_dbsave = epg_dbsave
         param_update = '"epgdb_periodicsave":' + str(sel_epg_dbsave)
-    if sel_epg == 5:
+    if sel_epg == 7:
         sel_epg_intcron = dialog.input('Edit the cron multiline for internal grabbers', defaultt=epg_intcron,type=xbmcgui.INPUT_ALPHANUM)
         if sel_epg_intcron == "":
             sel_epg_intcron = epg_intcron
         param_update = '"cron":"' + sel_epg_intcron + '"'
-    if sel_epg == 6:
+    if sel_epg == 8:
         sel_epg_otainit = dialog.select('Enable or disable initial EPG grab at startup', list=enabledisable)
         if sel_epg_otainit >= 0:
             epg_otainit = truefalse[sel_epg_otainit]
             param_update = '"ota_initial":' + epg_otainit
-    if sel_epg == 7:
+    if sel_epg == 9:
         sel_epg_otacron = dialog.input('Edit the cron multiline for over-the-air grabbers', defaultt=epg_otacron,type=xbmcgui.INPUT_ALPHANUM)
         if sel_epg_otacron == "":
             sel_epg_otacron = epg_otacron
         param_update = '"cron":"' + sel_epg_otacron + '"'
-    if sel_epg == 8:
+    if sel_epg == 10:
         sel_epg_otatime = dialog.input('OTA EPG scan timeout in seconds (30-7200)', defaultt=str(epg_otatime),type=xbmcgui.INPUT_NUMERIC)
         if sel_epg_otatime == "":
             sel_epg_otatime = epg_otatime
         param_update = '"ota_timeout":' + str(sel_epg_otatime)
-    param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/epggrab/config/save?node={' + param_update + '}'
-    param_save = requests.get(param_url)
-    epg()
+    if param_update != "":
+        param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/epggrab/config/save?node={' + param_update + '}'
+        param_save = requests.get(param_url)
+        epg()
 
 def epgmod_list_load():
     epg_modlist_url = 'http://' + tvh_url + ':' + tvh_port + '/api/epggrab/module/list'
@@ -771,9 +775,10 @@ def epgmod_param_edit(epgmod_uuid_sel, epgmod_info_list, epgmod_enabled, epgmod_
         if sel_param == 3:
             sel_epgmod_args = dialog.input('Additional arguments to pass to the grabber', defaultt=epgmod_args,type=xbmcgui.INPUT_ALPHANUM)
             param_update = '"args":"' + sel_epgmod_args + '"'
-        param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/save?node={' + param_update + ',"uuid":"' + epgmod_uuid_sel + '"}'
-        param_save = requests.get(param_url)
-        epgmod_param_load(epgmod_uuid_sel)
+        if param_update != "":
+            param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/save?node={' + param_update + ',"uuid":"' + epgmod_uuid_sel + '"}'
+            param_save = requests.get(param_url)
+            epgmod_param_load(epgmod_uuid_sel)
 
 def adapt_param_load(adapter_uuid_sel):
     adapt_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/load?uuid=' + adapter_uuid_sel
@@ -856,9 +861,10 @@ def adapt_param_edit(adapter_uuid_sel, adapt_info_list, adapt_enabled, adapt_nam
             if sel_adapt_idle >= 0:
                 adapt_idle = truefalse[sel_adapt_idle]
                 param_update = '"idlescan":' + adapt_idle
-        param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/save?node={' + param_update + ',"uuid":"' + adapter_uuid_sel + '"}'
-        param_save = requests.get(param_url)
-        adapt_param_load(adapter_uuid_sel)
+        if param_update != "":
+            param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/save?node={' + param_update + ',"uuid":"' + adapter_uuid_sel + '"}'
+            param_save = requests.get(param_url)
+            adapt_param_load(adapter_uuid_sel)
 
 def network_new():
     net_type_name = ["ATSC-T","ATSC-C","DVB-S","DVB-C","DVB-T","ISDB-S","ISDB-C","ISDB-T","IPTV Automatic"]
@@ -890,7 +896,8 @@ def net_param_load(net_uuid_sel):
     net_load = requests.get(net_url).json()
     net_name = find_param(net_load, 'networkname')
     net_bouquet = find_param(net_load, 'bouquet')
-    net_type = net_load['entries'][0]['params'][17]['enum']['params']['type']
+    net_type = net_load['entries'][0]['class']
+    net_type = re.sub("dvb_network_","",net_type)
     net_num_mux = find_param(net_load, 'num_mux')
     net_num_svc = find_param(net_load, 'num_svc')
     net_num_ch = find_param(net_load, 'num_chn')
@@ -935,11 +942,8 @@ def net_param_edit(net_uuid_sel, net_info_list, net_name, net_bouquet, net_type,
             for scan_v in dvb_list['entries']:
                 scan_val.append(scan_v['val'])
             sel_scan = dialog.select('Select a pre-defined mux list for the ' + net_name + " network", list=scan_val)
-            scan_val_sel = scan_val[sel_scan]
+            scan_val_sel = scan_key[sel_scan]
             param_update = '"scanfile":"' + scan_val_sel + '"'
-            param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/save?node={' + param_update + ',"uuid":"' + net_uuid_sel + '"}'
-            param_save = requests.get(param_url)
-            net_param_load(net_uuid_sel)
         if sel_param == 3 and net_num_mux != 0 and net_num_svc != 0:
             if dialog.yesno(str(net_num_svc) + " services found!", "Would you like to scan muxes for new services?"):
                 start_scan(net_uuid_sel)
@@ -965,7 +969,9 @@ def net_param_edit(net_uuid_sel, net_info_list, net_name, net_bouquet, net_type,
             delete_net_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/delete?uuid=["' + net_uuid_sel +'"]'
             delete_net = requests.get(delete_net_url)
             networks()
-        if sel_param < 5:
+        if param_update != "":
+            param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/save?node={' + param_update + ',"uuid":"' + net_uuid_sel + '"}'
+            param_save = requests.get(param_url)
             net_param_load(net_uuid_sel)
 
 def start_scan(net_uuid_sel):
@@ -1208,6 +1214,8 @@ def networks():
     for net_u in networks['entries']:
         net_uuid.append(net_u['uuid'])
     sel_network = dialog.select('Select a network to configure', list=net_name)
+    if sel_network < 0:
+        return
     if sel_network == 0:
         net_uuid_sel = network_new()
         net_param_load(net_uuid_sel)
