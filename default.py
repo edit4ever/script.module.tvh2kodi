@@ -530,6 +530,128 @@ def mux_param_edit_dvbt(mux_uuid_sel, mux_info_list, mux_plp_id, mux_fec_lo, mux
             param_save = requests.get(param_url)
             mux_param_load_dvbt(mux_uuid_sel)
 
+def mux_param_load_dvbs(mux_uuid_sel):
+    mux_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/load?uuid=' + mux_uuid_sel
+    mux_load = requests.get(mux_url).json()
+    mux_name = mux_load['entries'][0]['text']
+    mux_enabled, mux_enabled_key, mux_enabled_val = find_param_dict(mux_load, 'enabled', 'enum')
+    mux_delsys, mux_delsys_list = find_param_list(mux_load, 'delsys', 'enum')
+    mux_frequency = find_param(mux_load, 'frequency')
+    mux_symbolrate = find_param(mux_load, 'symbolrate')
+    mux_polarization, mux_polarization_key, mux_polarization_val = find_param_dict(mux_load, 'polarisation', 'enum')
+    mux_modulation, mux_modulation_key, mux_modulation_val = find_param_dict(mux_load, 'modulation', 'enum')
+    mux_fec, mux_fec_key, mux_fec_val = find_param_dict(mux_load, 'fec', 'enum')
+    mux_scanstate, mux_scanstate_key, mux_scanstate_val = find_param_dict(mux_load, 'scan_state', 'enum')
+    mux_rolloff, mux_rolloff_key, mux_rolloff_val = find_param_dict(mux_load, 'rolloff', 'enum')
+    mux_pilot, mux_pilot_key, mux_pilot_val = find_param_dict(mux_load, 'pilot', 'enum')
+    mux_sidfilter = find_param(mux_load, 'sid_filter')
+    mux_streamid = find_param(mux_load, 'stream_id')
+    mux_plsmode, mux_plsmode_key, mux_plsmode_val = find_param_dict(mux_load, 'pls_mode', 'enum')
+    mux_plscode = find_param(mux_load, 'pls_code')
+    mux_services = find_param(mux_load, 'num_svc')
+    mux_channels = find_param(mux_load, 'num_chn')
+    mux_info_list = ["Enabled: " + str(mux_enabled), "Delivery System: " + str(mux_delsys), "Frequency: " + str(mux_frequency), "Symbol Rate: " + str(mux_symbolrate), "Polarization: " + str(mux_polarization), "Modulation: " + str(mux_modulation), "FEC: " + str(mux_fec), "Rolloff: " + str(mux_rolloff), "Pilot: " + str(mux_pilot), "Service ID: " + str(mux_sidfilter), "ISI Stream ID: " + str(mux_streamid), "PLS Mode: " + str(mux_plsmode), "PLS Code: " + str(mux_plscode), "Scan Status: " + str(mux_scanstate), "Number of Services: " + str(mux_services), "Number of Channels: " + str(mux_channels), "DELETE THE MUX"]
+    mux_param_edit_dvbs(mux_uuid_sel, mux_info_list, mux_sidfilter, mux_streamid, mux_polarization, mux_polarization_key, mux_polarization_val, mux_symbolrate, mux_plscode, mux_fec, mux_fec_key, mux_fec_val, mux_plsmode, mux_plsmode_key, mux_plsmode_val, mux_pilot, mux_pilot_key, mux_pilot_val, mux_scanstate, mux_scanstate_key, mux_scanstate_val, mux_frequency, mux_rolloff, mux_rolloff_key, mux_rolloff_val, mux_modulation, mux_modulation_key, mux_modulation_val, mux_enabled, mux_enabled_key, mux_enabled_val, mux_delsys, mux_delsys_list, mux_name, mux_services, mux_channels)
+
+def mux_param_edit_dvbs(mux_uuid_sel, mux_info_list, mux_sidfilter, mux_streamid, mux_polarization, mux_polarization_key, mux_polarization_val, mux_symbolrate, mux_plscode, mux_fec, mux_fec_key, mux_fec_val, mux_plsmode, mux_plsmode_key, mux_plsmode_val, mux_pilot, mux_pilot_key, mux_pilot_val, mux_scanstate, mux_scanstate_key, mux_scanstate_val, mux_frequency, mux_rolloff, mux_rolloff_key, mux_rolloff_val, mux_modulation, mux_modulation_key, mux_modulation_val, mux_enabled, mux_enabled_key, mux_enabled_val, mux_delsys, mux_delsys_list, mux_name, mux_services, mux_channels):
+    if mux_scanstate == "ACTIVE":
+        sel_param = dialog.select(str(mux_name) + ' - Select parameter to edit', list=mux_info_list, autoclose=4000)
+        mux_param_load_dvbs(mux_uuid_sel)
+    sel_param = dialog.select(str(mux_name) + ' - Select parameter to edit', list=mux_info_list)
+    if sel_param < 0:
+        muxes()
+    if sel_param >= 0:
+        param_update = ""
+        if sel_param == 0:
+            sel_enabled = dialog.select('Enable or disable the mux', list=mux_enabled_val)
+            if sel_enabled <0:
+                mux_param_load_dvbs(mux_uuid_sel)
+            if sel_enabled >= 0:
+                mux_enabled = mux_enabled_key[sel_enabled]
+                param_update = '"enabled":' + str(mux_enabled)
+        if sel_param == 1:
+            sel_enabled = dialog.select('Select the mux delivery system', list=mux_delsys_list)
+            if sel_enabled <0:
+                mux_param_load_dvbs(mux_uuid_sel)
+            if sel_enabled >= 0:
+                mux_delsys = mux_delsys_list[sel_enabled]
+                param_update = '"delsys":"' + str(mux_delsys + '"')
+        if sel_param == 2:
+            sel_mux_frequency = dialog.input('Edit the mux frequency', defaultt=str(mux_frequency),type=xbmcgui.INPUT_NUMERIC)
+            param_update = '"frequency":' + sel_mux_frequency
+        if sel_param == 3:
+            sel_mux_frequency = dialog.input('Edit the mux symbol rate', defaultt=str(mux_symbolrate),type=xbmcgui.INPUT_NUMERIC)
+            param_update = '"symbolrate":' + sel_mux_symbolrate
+        if sel_param == 4:
+            sel_mux_polarization = dialog.select('Select the polarization of the mux', list=mux_polarization_val)
+            if sel_mux_polarization <0:
+                mux_param_load_dvbs(mux_uuid_sel)
+            if sel_mux_polarization >= 0:
+                mux_polarization = mux_polarization_key[sel_mux_polarization]
+                param_update = '"polarisation":"' + str(mux_polarization) + '"'
+        if sel_param == 5:
+            sel_mux_modulation = dialog.select('Select the modulation of the mux', list=mux_modulation_val)
+            if sel_mux_modulation <0:
+                mux_param_load_dvbs(mux_uuid_sel)
+            if sel_mux_modulation >= 0:
+                mux_modulation = mux_modulation_key[sel_mux_modulation]
+                param_update = '"modulation":"' + str(mux_modulation) + '"'
+        if sel_param == 6:
+            sel_mux_fec = dialog.select('Select the mux forward error correction', list=mux_fec_val)
+            if sel_mux_fec <0:
+                mux_param_load_dvbs(mux_uuid_sel)
+            if sel_mux_fec >= 0:
+                mux_fec = mux_fec_key[sel_mux_fec]
+                param_update = '"fec":"' + str(mux_fec) + '"'
+        if sel_param == 7:
+            sel_mux_rolloff = dialog.select('Select the mux rolloff', list=mux_rolloff_val)
+            if sel_mux_rolloff <0:
+                mux_param_load_dvbs(mux_uuid_sel)
+            if sel_mux_rolloff >= 0:
+                mux_rolloff = mux_rolloff_key[sel_mux_rolloff]
+                param_update = '"rolloff":"' + str(mux_rolloff) + '"'
+        if sel_param == 8:
+            sel_mux_pilot = dialog.select('Select the mux pilot', list=mux_pilot_val)
+            if sel_mux_pilot <0:
+                mux_param_load_dvbs(mux_uuid_sel)
+            if sel_mux_pilot >= 0:
+                mux_pilot = mux_pilot_key[sel_mux_pilot]
+                param_update = '"pilot":"' + str(mux_pilot) + '"'
+        if sel_param == 9:
+            sel_mux_sidfilter = dialog.input('Edit the mux Service ID - filter out others', defaultt=str(mux_sidfilter),type=xbmcgui.INPUT_ALPHANUM)
+            param_update = '"sid_filter":' + sel_mux_sidfilter
+        if sel_param == 10:
+            sel_mux_streamid = dialog.input('Edit the mux Stream ID', defaultt=str(mux_streamid),type=xbmcgui.INPUT_ALPHANUM)
+            param_update = '"stream_id":' + sel_mux_streamid
+        if sel_param == 11:
+            sel_mux_plsmode = dialog.select('Select the mux bandwidth', list=mux_plsmode_val)
+            if sel_mux_plsmode <0:
+                mux_param_load_dvbs(mux_uuid_sel)
+            if sel_mux_plsmode >= 0:
+                mux_plsmode = mux_plsmode_key[sel_mux_plsmode]
+                param_update = '"pls_mode":"' + str(mux_plsmode) + '"'
+        if sel_param == 12:
+            sel_mux_plscode = dialog.input('Edit the mux PLS Code', defaultt=str(mux_plscode),type=xbmcgui.INPUT_ALPHANUM)
+            param_update = '"pls_code":' + sel_mux_plscode
+        if sel_param == 13:
+            sel_mux_scanstate = dialog.select('Set the scan state of the mux', list=mux_scanstate_val)
+            if sel_mux_scanstate <0:
+                mux_param_load_(mux_uuid_sel)
+            if sel_mux_scanstate >= 0:
+                mux_scanstate = mux_scanstate_key[sel_mux_scanstate]
+                param_update = '"scan_state":' + str(mux_scanstate)
+        if sel_param == 14:
+            confirm_del = dialog.yesno('Confirm mux delete', 'Are you sure want to delete the ' + mux_name + ' mux?')
+            if not confirm_del:
+                return
+            delete_mux_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/delete?uuid=["' + mux_uuid_sel +'"]'
+            delete_mux = requests.get(delete_mux_url)
+            muxes()
+        if param_update != "":
+            param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/save?node={' + param_update + ',"uuid":"' + mux_uuid_sel + '"}'
+            param_save = requests.get(param_url)
+            mux_param_load_dvbs(mux_uuid_sel)
+
 def mux_new():
     new_mux_net_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/load?class=mpegts_network'
     new_mux_net_load = requests.get(new_mux_net_url).json()
