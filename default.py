@@ -21,12 +21,18 @@ try:
     if tvh_url_get:
         tvh_url_set = xbmcaddon.Addon().setSetting(id='tvhurl', value=tvh_url_get)
     else:
-        tvh_url_set = xbmcaddon.Addon().setSetting(id='tvhurl', value="127.0.0.1")
+        try:
+            tvh_url = xbmcaddon.Addon().getSetting('tvhurl')
+        except:
+            tvh_url_set = xbmcaddon.Addon().setSetting(id='tvhurl', value="127.0.0.1")
     tvh_port_get = xbmcaddon.Addon('pvr.hts').getSetting("http_port")
     if tvh_port_get:
         tvh_port_set = xbmcaddon.Addon().setSetting(id='tvhport', value=tvh_port_get)
     else:
-        tvh_port_set = xbmcaddon.Addon().setSetting(id='tvhport', value="9981")
+        try:
+            tvh_port = xbmcaddon.Addon().getSetting('tvhport')
+        except:
+            tvh_port_set = xbmcaddon.Addon().setSetting(id='tvhport', value="9981")
 except:
     pass
 
@@ -915,14 +921,17 @@ def adapt_param_load(adapter_uuid_sel):
     if adapt_network == []:
         adapt_network = ""
     else:
-        adapt_network_uuid = adapt_load['entries'][0]['params'][10]['value'][0]
-        adapt_network_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/load?uuid=' + str(adapt_network_uuid)
-        adapt_network_load = requests.get(adapt_network_url).json()
-        adapt_network = adapt_network_load['entries'][0]['text']
+        adapt_network_uuid_list = find_list(adapt_load, 'networks', 'value')
+        adapt_network_name = []
+        for net_u in adapt_network_uuid_list:
+            adapt_network_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/load?uuid=' + str(net_u)
+            adapt_network_load = requests.get(adapt_network_url).json()
+            adapt_network_name.append(adapt_network_load['entries'][0]['text'])
+        adapt_network = '  &  '.join(str(s) for s in adapt_network_name)
     adapt_info_list = ["Name: " + str(adapt_name), "Enabled: " + str(adapt_enabled), "Networks: " + str(adapt_network), "Priority: " + str(adapt_priority), "Enable OTA EPG scanning: " + str(adapt_otaepg), "Allow initial scanning on startup: " + str(adapt_init), "Allow idle scanning: " + str(adapt_idle)]
-    adapt_param_edit(adapter_uuid_sel, adapt_info_list, adapt_enabled, adapt_name, adapt_network, adapt_priority, adapt_otaepg, adapt_init, adapt_idle)
+    adapt_param_edit(adapter_uuid_sel, adapt_info_list, adapt_enabled, adapt_name, adapt_network, adapt_network_uuid_list, adapt_priority, adapt_otaepg, adapt_init, adapt_idle)
 
-def adapt_param_edit(adapter_uuid_sel, adapt_info_list, adapt_enabled, adapt_name, adapt_network, adapt_priority, adapt_otaepg, adapt_init, adapt_idle):
+def adapt_param_edit(adapter_uuid_sel, adapt_info_list, adapt_enabled, adapt_name, adapt_network, adapt_network_uuid_list, adapt_priority, adapt_otaepg, adapt_init, adapt_idle):
     sel_param = dialog.select('Adapters Configuration - Select parameter to edit', list=adapt_info_list)
     if sel_param < 0:
         adapters()
@@ -941,27 +950,29 @@ def adapt_param_edit(adapter_uuid_sel, adapt_info_list, adapt_enabled, adapt_nam
                 adapt_enabled = truefalse[sel_adapt_enabled]
                 param_update = '"enabled":' + adapt_enabled
         if sel_param == 2:
-            networks_url = 'http://' + tvh_url + ':' + tvh_port + '/api/mpegts/network/grid'
+            networks_url = 'http://' + tvh_url + ':' + tvh_port + '/api/mpegts/input/network_list?uuid=' + adapter_uuid_sel
             networks = requests.get(networks_url).json()
-            net_name = ["Setup New Network"]
-            net_uuid = [0]
+            net_uuid = []
             if networks['entries'] == []:
                 if dialog.yesno("No Networks found!", "", "Would you like to setup a new Network?"):
                     net_uuid_sel = network_new()
                     param_update = '"networks":["' + net_uuid_sel + '"]'
             else:
-                net_name = ["Setup New Network"]
-                net_uuid = [0]
-                for net_n in networks['entries']:
-                    net_name.append(net_n['networkname'])
-                for net_u in networks['entries']:
-                    net_uuid.append(net_u['uuid'])
-                sel_network = dialog.select('Select a network to assign to this adapter', list=net_name)
-                if sel_network == 0:
-                    network_new()
-                    param_update = '"networks":["' + net_uuid_sel + '"]'
-                if sel_network > 0:
-                    net_uuid_sel = net_uuid[sel_network]
+                net_key = []
+                net_val = []
+                net_dict = networks['entries']
+                for net_k in net_dict:
+                    net_key.append(net_k['key'])
+                for net_v in net_dict:
+                    net_val.append(net_v['val'])
+                net_preselect = [i for i, item in enumerate(net_key) if item in set(adapt_network_uuid_list)]
+                sel_network = dialog.multiselect('Select which networks to assign to this adapter', options=net_val, preselect=net_preselect)
+                if sel_network == [] or sel_network == None:
+                    adapt_param_load(adapter_uuid_sel)
+                else:
+                    for sel in sel_network:
+                        net_uuid.append(net_key[sel])
+                    net_uuid_sel =  '", "'.join(str(s) for s in net_uuid)
                     param_update = '"networks":["' + net_uuid_sel + '"]'
         if sel_param == 3:
             sel_adapt_priority = dialog.input('Edit the adapter priority (higher used first)', defaultt=str(adapt_priority),type=xbmcgui.INPUT_NUMERIC)
