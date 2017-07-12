@@ -918,10 +918,10 @@ def adapt_param_load(adapter_uuid_sel):
     adapt_init = find_param(adapt_load, 'initscan')
     adapt_idle = find_param(adapt_load, 'idlescan')
     adapt_network = find_param(adapt_load, 'networks')
+    adapt_network_uuid_list = find_list(adapt_load, 'networks', 'value')
     if adapt_network == []:
         adapt_network = ""
     else:
-        adapt_network_uuid_list = find_list(adapt_load, 'networks', 'value')
         adapt_network_name = []
         for net_u in adapt_network_uuid_list:
             adapt_network_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/load?uuid=' + str(net_u)
@@ -1511,10 +1511,51 @@ def epg():
         if epg_run_ota == {}:
             dialog.ok("OTA EPG grabber triggered", "You have initiated the OTA EPG grabber. Your epg should update once completed. Sometimes Kodi needs a restart in order to update the EPG display.")
     if sel_epg == 2:
+        comet_poll_box_url = 'http://' + tvh_url + ':' + tvh_port + '/comet/poll'
+        comet_poll_box = requests.get(comet_poll_box_url).json()
+        comet_poll_box_id = comet_poll_box['boxid']
         epg_run_int_url = 'http://' + tvh_url + ':' + tvh_port + '/api/epggrab/internal/rerun?rerun=1'
         epg_run_int = requests.get(epg_run_int_url).json()
         if epg_run_int == {}:
-            dialog.ok("Internal EPG grabber triggered", "You have initiated the internal EPG grabber. Your epg should update once completed. Sometimes Kodi needs a restart in order to update the EPG display.")
+            pDialog = xbmcgui.DialogProgress()
+            pDialog.create('Internal EPG grabber triggered')
+            comet_poll_url = 'http://' + tvh_url + ':' + tvh_port + '/comet/poll?boxid=' + comet_poll_box_id + '&immediate=0'
+            comet_poll = requests.get(comet_poll_url).json()
+            comet_poll_logtxt_list = []
+            for t in comet_poll['messages']:
+                comet_poll_logtxt_list.insert(0,t['logtxt'])
+            comet_poll_logtxt = '\n'.join(comet_poll_logtxt_list)
+            pDialog.update(10, comet_poll_logtxt)
+            time.sleep(1)
+            if (pDialog.iscanceled()):
+                pDialog.close()
+            comet_update = False
+            comet_poll = requests.get(comet_poll_url).json()
+            if comet_poll['messages'] == []:
+                comet_poll_logtxt = '\n'.join(comet_poll_logtxt_list)
+                pDialog.update(25, comet_poll_logtxt)
+            time.sleep(1)
+            if (pDialog.iscanceled()):
+                pDialog.close()
+            perc_update = 30
+            while comet_update == False:
+                if (pDialog.iscanceled()):
+                    pDialog.close()
+                pDialog.update(perc_update, comet_poll_logtxt)
+                comet_poll = requests.get(comet_poll_url).json()
+                perc_update = perc_update + 5
+                if comet_poll['messages'] == []:
+                    comet_update = True
+                    time.sleep(1)
+#            comet_poll = requests.get(comet_poll_url).json()
+            for t in comet_poll['messages']:
+                comet_poll_logtxt_list.insert(0,t['logtxt'])
+            comet_poll_logtxt = '\n'.join(comet_poll_logtxt_list)
+            pDialog.update(100, comet_poll_logtxt)
+            time.sleep(2)
+            pDialog.close()
+            if dialog.yesno("Internal EPG grabber finished", "Your EPG has been updated.", "Sometimes Kodi needs a restart in order to update the EPG display.  Or you can clear the data in the PVR & Live TV settings.", "Would you like to open the PVR & Live TV settings?"):
+                xbmc.executebuiltin('ActivateWindow(pvrsettings)')
     if sel_epg > 2 :
         epg_param(sel_epg, epg_rename, epg_renumber, epg_reicon, epg_dbsave, epg_intcron, epg_otainit, epg_otacron, epg_otatime)
 
