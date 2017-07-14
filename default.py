@@ -155,7 +155,10 @@ def dvr_param_edit(dvr_uuid_sel, dvr_info_list, dvr_keep_key, dvr_keep_val, dvr_
         param_update = ""
         if sel_param == 0:
             sel_dvr_name = dialog.input('Edit the DVR profile name', defaultt=dvr_name,type=xbmcgui.INPUT_ALPHANUM)
-            param_update = '"name":"' + sel_dvr_name + '"'
+            if sel_dvr_name == "":
+                dvr_param_load(dvr_uuid_sel)
+            else:
+                param_update = '"name":"' + sel_dvr_name + '"'
         if sel_param == 1:
             sel_enabled = dialog.select('Enable or disable the DVR profile', list=enabledisable)
             if sel_enabled >= 0:
@@ -516,7 +519,10 @@ def mux_param_edit_dvbt(mux_uuid_sel, mux_info_list, mux_plp_id, mux_fec_lo, mux
                 param_update = '"fec_lo":"' + str(mux_fec_lo) + '"'
         if sel_param == 10:
             sel_mux_plp_id = dialog.input('Edit the mux PLP ID', defaultt=str(mux_plp_id),type=xbmcgui.INPUT_ALPHANUM)
-            param_update = '"plp_id":' + sel_mux_plp_id
+            if sel_mux_plp_id == "":
+                return
+            else:
+                param_update = '"plp_id":' + sel_mux_plp_id
         if sel_param == 11:
             sel_mux_scanstate = dialog.select('Set the scan state of the mux', list=mux_scanstate_val)
             if sel_mux_scanstate <0:
@@ -625,10 +631,16 @@ def mux_param_edit_dvbs(mux_uuid_sel, mux_info_list, mux_sidfilter, mux_streamid
                 param_update = '"pilot":"' + str(mux_pilot) + '"'
         if sel_param == 9:
             sel_mux_sidfilter = dialog.input('Edit the mux Service ID - filter out others', defaultt=str(mux_sidfilter),type=xbmcgui.INPUT_ALPHANUM)
-            param_update = '"sid_filter":' + sel_mux_sidfilter
+            if sel_mux_sidfilter == "":
+                mux_param_load_dvbs(mux_uuid_sel)
+            else:
+                param_update = '"sid_filter":' + sel_mux_sidfilter
         if sel_param == 10:
             sel_mux_streamid = dialog.input('Edit the mux Stream ID', defaultt=str(mux_streamid),type=xbmcgui.INPUT_ALPHANUM)
-            param_update = '"stream_id":' + sel_mux_streamid
+            if sel_mux_streamid == "":
+                mux_param_load_dvbs(mux_uuid_sel)
+            else:
+                param_update = '"stream_id":' + sel_mux_streamid
         if sel_param == 11:
             sel_mux_plsmode = dialog.select('Select the mux bandwidth', list=mux_plsmode_val)
             if sel_mux_plsmode <0:
@@ -638,7 +650,10 @@ def mux_param_edit_dvbs(mux_uuid_sel, mux_info_list, mux_sidfilter, mux_streamid
                 param_update = '"pls_mode":"' + str(mux_plsmode) + '"'
         if sel_param == 12:
             sel_mux_plscode = dialog.input('Edit the mux PLS Code', defaultt=str(mux_plscode),type=xbmcgui.INPUT_ALPHANUM)
-            param_update = '"pls_code":' + sel_mux_plscode
+            if sel_mux_plscode == "":
+                mux_param_load_dvbs(mux_uuid_sel)
+            else:
+                param_update = '"pls_code":' + sel_mux_plscode
         if sel_param == 13:
             sel_mux_scanstate = dialog.select('Set the scan state of the mux', list=mux_scanstate_val)
             if sel_mux_scanstate <0:
@@ -732,7 +747,10 @@ def ch_param_edit(ch_uuid_sel, ch_info_list, ch_enabled, ch_autoname, ch_name, c
         param_update = ""
         if sel_param == 0:
             sel_ch_name = dialog.input('Edit the channel name', defaultt=ch_name,type=xbmcgui.INPUT_ALPHANUM)
-            param_update = '"name":"' + sel_ch_name + '"'
+            if sel_ch_name == "":
+                ch_param_load(ch_uuid_sel)
+            else:
+                param_update = '"name":"' + sel_ch_name + '"'
         if sel_param == 1:
             sel_ch_number = dialog.input('Edit the channel number', defaultt=ch_number,type=xbmcgui.INPUT_NUMERIC)
             param_update = '"number":"' + sel_ch_number + '"'
@@ -748,7 +766,10 @@ def ch_param_edit(ch_uuid_sel, ch_info_list, ch_enabled, ch_autoname, ch_name, c
                 param_update = '"autoname":' + ch_autoname
         if sel_param == 4:
             sel_ch_icon = dialog.input('Edit the channel icon URL', defaultt=ch_icon,type=xbmcgui.INPUT_ALPHANUM)
-            param_update = '"icon":"' + sel_ch_icon + '"'
+            if sel_ch_name == "":
+                ch_param_load(ch_uuid_sel)
+            else:
+                param_update = '"icon":"' + sel_ch_icon + '"'
         if sel_param == 5:
             epg_grid_url =  'http://' + tvh_url + ':' + tvh_port + '/api/epggrab/channel/grid?sort=names&dir=ASC&all=1'
             epg_grid_load = requests.get(epg_grid_url).json()
@@ -1567,6 +1588,66 @@ def wizard():
     else:
         wizard_start()
 
+@plugin.route('/yvh')
+def tvh():
+    tvh_config_url = 'http://' + tvh_url + ':' + tvh_port + '/api/config/load'
+    tvh_config_load = requests.get(tvh_config_url).json()
+    dvb_scan_path = find_param(tvh_config_load, 'muxconfpath')
+    prefer_picon = find_param(tvh_config_load, 'prefer_picon')
+    ch_icon_path = find_param(tvh_config_load, 'chiconpath')
+    ch_icon_scheme, ch_icon_scheme_key, ch_icon_scheme_val = find_param_dict(tvh_config_load, 'chiconscheme', 'enum')
+    picon_path = find_param(tvh_config_load, 'piconpath')
+    picon_scheme, picon_scheme_key, picon_scheme_val = find_param_dict(tvh_config_load, 'piconscheme', 'enum')
+    tvh_config_info_list = ["DVB scan path: " + str(dvb_scan_path), "Prefer picon: " + str(prefer_picon), "Channel icon path: " + str(ch_icon_path), "Channel icon scheme: " + str(ch_icon_scheme), "Picon path: " + str(picon_path), "Picon scheme: " + str(picon_scheme)]
+#    tvh_config_param_edit(dvb_scan_path, prefer_picon, ch_icon_path, ch_icon_scheme, picon_path, picon_scheme)
+    sel_tvh = dialog.select('Select a Tvh configuration parameter to edit', list=tvh_config_info_list)
+    if sel_tvh < 0:
+        return
+    if sel_tvh == 0:
+        sel_dvb_scan_path = dialog.input('Edit the DVB scan files path', defaultt=dvb_scan_path,type=xbmcgui.INPUT_ALPHANUM)
+        if sel_dvb_scan_path == "":
+            return
+        else:
+            param_update = '"muxconfpath":"' + sel_dvb_scan_path + '"'
+    if sel_tvh == 1:
+        sel_prefer_picon = dialog.select('Enable or disable to prefer picons over channel name', list=enabledisable)
+        if sel_prefer_picon <0:
+            return
+        if sel_prefer_picon >= 0:
+            prefer_picon = truefalse[sel_prefer_picon]
+            param_update = '"prefer_picon":' + prefer_picon
+    if sel_tvh == 2:
+        sel_ch_icon_path = dialog.input('Edit the channel icons path', defaultt=ch_icon_path,type=xbmcgui.INPUT_ALPHANUM)
+        if sel_ch_icon_path == "":
+            return
+        else:
+            param_update = '"chiconpath":"' + sel_ch_icon_path + '"'
+    if sel_tvh == 3:
+        sel_ch_icon_scheme = dialog.select('Select the channel icon name scheme', list=ch_icon_scheme_val)
+        if sel_ch_icon_scheme <0:
+            return
+        if sel_ch_icon_scheme >= 0:
+            ch_icon_scheme = ch_icon_scheme_key[sel_ch_icon_scheme]
+            param_update = '"chiconscheme":"' + str(ch_icon_scheme) + '"'
+    if sel_tvh == 4:
+        sel_picon_path = dialog.input('Edit the channel icons path', defaultt=picon_path,type=xbmcgui.INPUT_ALPHANUM)
+        if sel_picon_path == "":
+            return
+        else:
+            param_update = '"piconpath":"' + sel_picon_path + '"'
+    if sel_tvh == 5:
+        sel_picon_scheme = dialog.select('Select the channel icon name scheme', list=picon_scheme_val)
+        if sel_picon_schem <0:
+            return
+        if sel_picon_scheme >= 0:
+            picon_scheme = ch_icon_scheme_key[sel_ch_icon_scheme]
+            param_update = '"piconscheme":"' + str(picon_scheme) + '"'
+    if param_update != "":
+        param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/config/save?node={' + param_update + '}'
+        param_save = requests.get(param_url)
+        tvh()
+
+
 @plugin.route('/tvhclient')
 def tvhclient():
     plugin.open_settings()
@@ -1622,6 +1703,12 @@ def index():
         'label': 'DVR Configuration',
         'path': plugin.url_for(u'dvr'),
         'thumbnail':get_icon_path('dvr'),
+    })
+    items.append(
+    {
+        'label': 'Tvh Base Configuration',
+        'path': plugin.url_for(u'tvh'),
+        'thumbnail':get_icon_path('settings'),
     })
     items.append(
     {
