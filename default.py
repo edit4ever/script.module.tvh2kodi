@@ -1199,7 +1199,7 @@ def wizard_start():
             adapter_uuid.append(adapter_x['uuid'])
         for adapter_t in adapter_get:
             adapter_list.append(adapter_t['text'])
-    sel_adapter = dialog.select('Select which adapter you would like to setup', list=adapter_list)
+    sel_adapter = dialog.select('Select which adapter you would like to setup first', list=adapter_list)
     if sel_adapter < 0:
         return
     if sel_adapter >= 0:
@@ -1322,7 +1322,7 @@ def wizard_start():
         map_ignore_num = map_status['ignore']
         map_complete = (map_ok_num + map_fail_num + map_ignore_num)
         map_total_perc = ((float(map_complete) / float(serv_total)) * 100)
-        dialog.ok("Wizard complete!", str(map_ok_num) + " new channels.", str(map_ignore_num) + " services ignored.", str(map_fail_num) + " services failed.")
+        dialog.ok("Wizard complete!", str(map_ok_num) + " new channels.", str(map_ignore_num) + " services ignored.   " + str(map_fail_num) + " services failed.", "You can now enable additional tuners in the adapters menu.")
 
 @plugin.route('/adapters')
 def adapters():
@@ -1598,8 +1598,8 @@ def tvh():
     ch_icon_scheme, ch_icon_scheme_key, ch_icon_scheme_val = find_param_dict(tvh_config_load, 'chiconscheme', 'enum')
     picon_path = find_param(tvh_config_load, 'piconpath')
     picon_scheme, picon_scheme_key, picon_scheme_val = find_param_dict(tvh_config_load, 'piconscheme', 'enum')
-    tvh_config_info_list = ["DVB scan path: " + str(dvb_scan_path), "Prefer picon: " + str(prefer_picon), "Channel icon path: " + str(ch_icon_path), "Channel icon scheme: " + str(ch_icon_scheme), "Picon path: " + str(picon_path), "Picon scheme: " + str(picon_scheme)]
-#    tvh_config_param_edit(dvb_scan_path, prefer_picon, ch_icon_path, ch_icon_scheme, picon_path, picon_scheme)
+    tvh_config_info_list = ["DVB scan path: " + str(dvb_scan_path), "Prefer picon: " + str(prefer_picon), "Channel icon path: " + str(ch_icon_path), "Channel icon scheme: " + str(ch_icon_scheme), "Picon path: " + str(picon_path), "Picon scheme: " + str(picon_scheme), "RESET ALL CHANNEL ICONS"]
+    param_update = ""
     sel_tvh = dialog.select('Select a Tvh configuration parameter to edit', list=tvh_config_info_list)
     if sel_tvh < 0:
         return
@@ -1642,6 +1642,17 @@ def tvh():
         if sel_picon_scheme >= 0:
             picon_scheme = ch_icon_scheme_key[sel_ch_icon_scheme]
             param_update = '"piconscheme":"' + str(picon_scheme) + '"'
+    if sel_tvh == 6:
+        if dialog.yesno("Channel Icons Reset", "This will reset all channel icons urls and try to match icons based on icon/picon settings.", "Are you sure you want to reset all channel icons?"):
+            channels_url = 'http://' + tvh_url + ':' + tvh_port + '/api/channel/grid?all=1&limit=999999999'
+            channels = requests.get(channels_url).json()
+            icon_update_list = []
+            for ch_u in channels['entries']:
+                channel_uuid = ch_u['uuid']
+                icon_update_list.append('{"icon":"","uuid":"' + str(ch_u['uuid']) + '"}')
+            icon_update = ','.join(icon_update_list)
+            icon_update_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/save?node=[' + icon_update + ']'
+            icon_update_save = requests.get(icon_update_url)
     if param_update != "":
         param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/config/save?node={' + param_update + '}'
         param_save = requests.get(param_url)
@@ -1720,7 +1731,7 @@ def index():
     {
         'label': 'Tvheadend Backend: ' + tvh_url + ':' + tvh_port,
         'path': plugin.url_for(u'tvhclient'),
-        'thumbnail':get_icon_path('settings'),
+        'thumbnail':get_icon_path('server'),
     })
 
     return items
