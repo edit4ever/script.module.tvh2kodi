@@ -17,10 +17,12 @@
     <description>Tvh2Kodi gives access to the basic Tvheadend settings directly from the Kodi interface. This can be used in place of the Tvheadend web interface to get your Tvheadend backend server configured and running.  It is also provides an easy way to scan for new services and channels and to configure your channel EPG sources.
 
 * minimum version of Tvheadend is 4.2
-
 v1.6
-- add channel icons reset option
-- add function to backup/import Tvheadend userdata
+- add backup and import of tvh userdata
+- add channel icon reset option
+v1.5
+- add progress bar for internal epg grab
+- add base tvh config parameters (set dvb scan files and channel icon paths)
 
     </description>
     <disclaimer>Copyright (C) 2017 edit4ever - edit4ever@gmail.com</disclaimer>
@@ -34,10 +36,6 @@ v1.6
         <screenshot>resources/screenshot-03.jpg</screenshot>
     </assets>
     <news>
-v1.5
-- add progress bar for internal epg grab
-- add base tvh config parameters (set dvb scan files and channel icon paths)
-
 v1.4
 - fix adapter network issue
 - add multiple network support to adapter
