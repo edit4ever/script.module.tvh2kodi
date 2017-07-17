@@ -140,38 +140,30 @@ def dis_or_enable_addon(addon_id, enable="true"):
             xbmc.log("### Disabled %s, response = %s" % (addon_id, response))
     return xbmc.executebuiltin('Container.Update(%s)' % xbmc.getInfoLabel('Container.FolderPath'))
 
-def zipfolder(foldername, target_dir):
-    zipobj = zipfile.ZipFile(foldername + '.zip', 'w', zipfile.ZIP_DEFLATED)
-    rootlen = len(target_dir) + 1
-    for base, dirs, files in os.walk(target_dir):
-        for file in files:
-            fn = os.path.join(base, file)
-            zipobj.write(fn, fn[rootlen:])
-
-def zipdir(dirPath=None, zipFilePath=None, includeDirInZip=True):
-    if not zipFilePath:
-        zipFilePath = dirPath + ".zip"
-    if not os.path.isdir(dirPath):
-        raise OSError("dirPath argument must point to a directory. "
-            "'%s' does not." % dirPath)
-    parentDir, dirToZip = os.path.split(dirPath)
-    def trimPath(path):
-        archivePath = path.replace(parentDir, "", 1)
-        if parentDir:
-            archivePath = archivePath.replace(os.path.sep, "", 1)
-        if not includeDirInZip:
-            archivePath = archivePath.replace(dirToZip + os.path.sep, "", 1)
-        return os.path.normcase(archivePath)
-    outFile = zipfile.ZipFile(zipFilePath, "w",
-        compression=zipfile.ZIP_DEFLATED)
-    for (archiveDirPath, dirNames, fileNames) in os.walk(dirPath):
-        for fileName in fileNames:
-            filePath = os.path.join(archiveDirPath, fileName)
-            outFile.write(filePath, trimPath(filePath))
-        if not fileNames and not dirNames:
-            zipInfo = zipfile.ZipInfo(trimPath(archiveDirPath) + "/")
-            outFile.writestr(zipInfo, "")
-    outFile.close()
+def ZipDir(inputDir, outputZip):
+    zipOut = zipfile.ZipFile(outputZip, 'w', compression=zipfile.ZIP_DEFLATED)
+    rootLen = len(os.path.dirname(inputDir))
+    def _ArchiveDirectory(parentDirectory):
+        contents = os.listdir(parentDirectory)
+        if not contents:
+            archiveRoot = parentDirectory[rootLen:].replace('\\', '/').lstrip('/')
+            zipInfo = zipfile.ZipInfo(archiveRoot+'/')
+            zipOut.writestr(zipInfo, '')
+        for item in contents:
+            fullPath = os.path.join(parentDirectory, item)
+            if os.path.isdir(fullPath) and not os.path.islink(fullPath):
+                _ArchiveDirectory(fullPath)
+            else:
+                archiveRoot = fullPath[rootLen:].replace('\\', '/').lstrip('/')
+                if os.path.islink(fullPath):
+                    zipInfo = zipfile.ZipInfo(archiveRoot)
+                    zipInfo.create_system = 3
+                    zipInfo.external_attr = 2716663808L
+                    zipOut.writestr(zipInfo, os.readlink(fullPath))
+                else:
+                    zipOut.write(fullPath, archiveRoot, zipfile.ZIP_DEFLATED)
+    _ArchiveDirectory(inputDir)
+    zipOut.close()
 
 def dvr_param_load(dvr_uuid_sel):
     dvr_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/load?uuid=' + dvr_uuid_sel
@@ -1709,7 +1701,7 @@ def tvh():
             tvh_addon = xbmcaddon.Addon(id='service.tvheadend42')
             tvh_userdata_path = xbmc.translatePath(tvh_addon.getAddonInfo('profile'))
         else:
-            tvh_userdata_path = '//' + tvh_url + '/userdata/addon_data/service.tvheadend42'
+            tvh_userdata_path = '//' + tvh_url + '/userdata/addon_data/service.tvheadend42/'
         try:
             tvh_json_url = 'http://' + tvh_url + ':8080/jsonrpc?request={"jsonrpc":"2.0","id":1,"method":"Addons.SetAddonEnabled","params":{"addonid":"service.tvheadend42","enabled":false}}'
             tvh_json_load = requests.get(tvh_json_url).json()
@@ -1719,9 +1711,9 @@ def tvh():
             return
         if tvh_stop == "OK":
             output_path = dialog.browse(3, "Where would you like to save the Tvheadend Backup file?", "files")
-            output_name = output_path + "service.tvheadend42-backup-" + str(datetime.datetime.today())
+            output_name = output_path + "service.tvheadend42-backup-" + str(datetime.date.today()) + ".zip"
             if dialog.yesno('Backup Tvheadend Userdata to Zip File', 'Zip file will be created in the following location:', str(output_path), 'Select YES to create backup.'):
-                zipfolder(output_name, tvh_userdata_path)
+                ZipDir(tvh_userdata_path, output_name)
                 dialog.ok("Tvheadend Userdata Backup Complete", "Tvheadend userdata has been backed up.", "Tvheadend service will be restarted.")
             try:
                 tvh_json_url = 'http://' + tvh_url + ':8080/jsonrpc?request={"jsonrpc":"2.0","id":1,"method":"Addons.SetAddonEnabled","params":{"addonid":"service.tvheadend42","enabled":true}}'
