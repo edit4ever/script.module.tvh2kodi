@@ -11,7 +11,8 @@ import json
 import urllib2
 import time
 import ast
-
+import zipfile
+import datetime
 
 plugin = Plugin()
 dialog = xbmcgui.Dialog()
@@ -122,6 +123,55 @@ def find_props_dict(d, param_id, param_id2):
     for param_v in param_dict:
         param_val.append(param_v['val'])
     return (param_key, param_val)
+
+def dis_or_enable_addon(addon_id, enable="true"):
+    addon = '"%s"' % addon_id
+    if xbmc.getCondVisibility("System.HasAddon(%s)" % addon_id) and enable == "true":
+        return xbmc.log("### Skipped %s, reason = allready enabled" % addon_id)
+    elif not xbmc.getCondVisibility("System.HasAddon(%s)" % addon_id) and enable == "false":
+        return xbmc.log("### Skipped %s, reason = not installed" % addon_id)
+    else:
+        do_json = '{"jsonrpc":"2.0","id":1,"method":"Addons.SetAddonEnabled","params":{"addonid":%s,"enabled":%s}}' % (addon, enable)
+        query = xbmc.executeJSONRPC(do_json)
+        response = json.loads(query)
+        if enable == "true":
+            xbmc.log("### Enabled %s, response = %s" % (addon_id, response))
+        else:
+            xbmc.log("### Disabled %s, response = %s" % (addon_id, response))
+    return xbmc.executebuiltin('Container.Update(%s)' % xbmc.getInfoLabel('Container.FolderPath'))
+
+def zipfolder(foldername, target_dir):
+    zipobj = zipfile.ZipFile(foldername + '.zip', 'w', zipfile.ZIP_DEFLATED)
+    rootlen = len(target_dir) + 1
+    for base, dirs, files in os.walk(target_dir):
+        for file in files:
+            fn = os.path.join(base, file)
+            zipobj.write(fn, fn[rootlen:])
+
+def zipdir(dirPath=None, zipFilePath=None, includeDirInZip=True):
+    if not zipFilePath:
+        zipFilePath = dirPath + ".zip"
+    if not os.path.isdir(dirPath):
+        raise OSError("dirPath argument must point to a directory. "
+            "'%s' does not." % dirPath)
+    parentDir, dirToZip = os.path.split(dirPath)
+    def trimPath(path):
+        archivePath = path.replace(parentDir, "", 1)
+        if parentDir:
+            archivePath = archivePath.replace(os.path.sep, "", 1)
+        if not includeDirInZip:
+            archivePath = archivePath.replace(dirToZip + os.path.sep, "", 1)
+        return os.path.normcase(archivePath)
+    outFile = zipfile.ZipFile(zipFilePath, "w",
+        compression=zipfile.ZIP_DEFLATED)
+    for (archiveDirPath, dirNames, fileNames) in os.walk(dirPath):
+        for fileName in fileNames:
+            filePath = os.path.join(archiveDirPath, fileName)
+            outFile.write(filePath, trimPath(filePath))
+        if not fileNames and not dirNames:
+            zipInfo = zipfile.ZipInfo(trimPath(archiveDirPath) + "/")
+            outFile.writestr(zipInfo, "")
+    outFile.close()
 
 def dvr_param_load(dvr_uuid_sel):
     dvr_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/load?uuid=' + dvr_uuid_sel
@@ -1588,7 +1638,7 @@ def wizard():
     else:
         wizard_start()
 
-@plugin.route('/yvh')
+@plugin.route('/tvh')
 def tvh():
     tvh_config_url = 'http://' + tvh_url + ':' + tvh_port + '/api/config/load'
     tvh_config_load = requests.get(tvh_config_url).json()
@@ -1598,7 +1648,7 @@ def tvh():
     ch_icon_scheme, ch_icon_scheme_key, ch_icon_scheme_val = find_param_dict(tvh_config_load, 'chiconscheme', 'enum')
     picon_path = find_param(tvh_config_load, 'piconpath')
     picon_scheme, picon_scheme_key, picon_scheme_val = find_param_dict(tvh_config_load, 'piconscheme', 'enum')
-    tvh_config_info_list = ["DVB scan path: " + str(dvb_scan_path), "Prefer picon: " + str(prefer_picon), "Channel icon path: " + str(ch_icon_path), "Channel icon scheme: " + str(ch_icon_scheme), "Picon path: " + str(picon_path), "Picon scheme: " + str(picon_scheme), "RESET ALL CHANNEL ICONS"]
+    tvh_config_info_list = ["DVB scan path: " + str(dvb_scan_path), "Prefer picon: " + str(prefer_picon), "Channel icon path: " + str(ch_icon_path), "Channel icon scheme: " + str(ch_icon_scheme), "Picon path: " + str(picon_path), "Picon scheme: " + str(picon_scheme), "RESET ALL CHANNEL ICONS", "BACKUP TVHEADEND USERDATA", "IMPORT TVHEADEND USERDATA"]
     param_update = ""
     sel_tvh = dialog.select('Select a Tvh configuration parameter to edit', list=tvh_config_info_list)
     if sel_tvh < 0:
@@ -1653,6 +1703,63 @@ def tvh():
             icon_update = ','.join(icon_update_list)
             icon_update_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/save?node=[' + icon_update + ']'
             icon_update_save = requests.get(icon_update_url)
+    if sel_tvh == 7:
+        dialog.ok("Tvheadend Userdata Backup", "The Tvheadend service will be stopped to start the backup.", "The Tvheadend client may show a connection error during the process.")
+        try:
+            tvh_json_url = 'http://' + tvh_url + ':8080/jsonrpc?request={"jsonrpc":"2.0","id":1,"method":"Addons.SetAddonEnabled","params":{"addonid":"service.tvheadend42","enabled":false}}'
+            tvh_json_load = requests.get(tvh_json_url).json()
+            tvh_stop = tvh_json_load['result']
+        except:
+            dialog.ok("Tvheadend Service Still Running!", "Unable to stop the Tvheadend service.", "Unable to complete backup.")
+            return
+        if tvh_stop == "OK":
+            if tvh_url == "127.0.0.1":
+                tvh_addon = xbmcaddon.Addon(id='service.tvheadend42')
+                tvh_userdata_path = xbmc.translatePath(tvh_addon.getAddonInfo('profile'))
+            else:
+                tvh_userdata_path = '//' + tvh_url + '/userdata/addon_data/service.tvheadend42'
+            output_path = dialog.browse(3, "Where would you like to save the Tvheadend Backup file?", "files")
+            output_name = output_path + "service.tvheadend42-backup-" + str(datetime.datetime.today())
+            if dialog.yesno('Backup Tvheadend Userdata to Zip File', 'Zip file will be created in the following location:', str(output_path), 'Select YES to create backup.'):
+                zipfolder(output_name, tvh_userdata_path)
+                dialog.ok("Tvheadend Userdata Backup Complete", "Tvheadend userdata has been backed up.", "Tvheadend service will be restarted.")
+            try:
+                tvh_json_url = 'http://' + tvh_url + ':8080/jsonrpc?request={"jsonrpc":"2.0","id":1,"method":"Addons.SetAddonEnabled","params":{"addonid":"service.tvheadend42","enabled":true}}'
+                tvh_json_load = requests.get(tvh_json_url).json()
+                tvh_stop = tvh_json_load['result']
+            except:
+                dialog.ok("Unable to Restart Tvheadend Service!", "Unable to restart the Tvheadend service.", "Please enable the service in Kodi addons.")
+        else:
+            dialog.ok("Tvheadend Service Still Running!", "Unable to stop the Tvheadend service.", "Unable to complete backup.")
+    if sel_tvh == 8:
+        dialog.ok("Tvheadend Userdata Import", "The Tvheadend service will be stopped to start the import.", "The Tvheadend client may show a connection error during the process.")
+        try:
+            tvh_json_url = 'http://' + tvh_url + ':8080/jsonrpc?request={"jsonrpc":"2.0","id":1,"method":"Addons.SetAddonEnabled","params":{"addonid":"service.tvheadend42","enabled":false}}'
+            tvh_json_load = requests.get(tvh_json_url).json()
+            tvh_stop = tvh_json_load['result']
+        except:
+            dialog.ok("Tvheadend Service Still Running!", "Unable to stop the Tvheadend service.", "Unable to complete the import.")
+            return
+        if tvh_stop == "OK":
+            if tvh_url == "127.0.0.1":
+                tvh_addon = xbmcaddon.Addon(id='service.tvheadend42')
+                tvh_userdata_path = xbmc.translatePath(tvh_addon.getAddonInfo('profile'))
+            else:
+                tvh_userdata_path = '//' + tvh_url + '/userdata/addon_data/service.tvheadend42'
+            zipfile_path = dialog.browse(1, "Select your Tvheadend userdata backup zip file?", "files", ".zip")
+            if dialog.yesno('Import Tvheadend Userdata from Zip File', 'Your current Tvheadend userdata will be overwritten.', '', 'Select YES to start import.'):
+                tvh_zip = zipfile.ZipFile(zipfile_path)
+                tvh_zip.extractall(tvh_userdata_path)
+                tvh_zip.close()
+                dialog.ok("Tvheadend Userdata Import Complete", "Tvheadend userdata has been imported.", "Tvheadend service will be restarted.")
+            try:
+                tvh_json_url = 'http://' + tvh_url + ':8080/jsonrpc?request={"jsonrpc":"2.0","id":1,"method":"Addons.SetAddonEnabled","params":{"addonid":"service.tvheadend42","enabled":true}}'
+                tvh_json_load = requests.get(tvh_json_url).json()
+                tvh_stop = tvh_json_load['result']
+            except:
+                dialog.ok("Unable to Restart Tvheadend Service!", "Unable to restart the Tvheadend service.", "Please enable the service in Kodi addons.")
+        else:
+            dialog.ok("Tvheadend Service Still Running!", "Unable to stop the Tvheadend service.", "Unable to complete backup.")
     if param_update != "":
         param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/config/save?node={' + param_update + '}'
         param_save = requests.get(param_url)
@@ -1717,7 +1824,7 @@ def index():
     })
     items.append(
     {
-        'label': 'Tvh Base Configuration',
+        'label': 'Tvh Base Configuration & Backup',
         'path': plugin.url_for(u'tvh'),
         'thumbnail':get_icon_path('settings'),
     })

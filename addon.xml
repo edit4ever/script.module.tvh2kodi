@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addon id="script.module.tvh2kodi"
        name="Tvheadend Setup for Kodi"
-       version="1.5"
+       version="1.6"
        provider-name="edit4ever">
   <requires>
     <import addon="xbmc.python" version="2.6.0"/>
@@ -18,9 +18,9 @@
 
 * minimum version of Tvheadend is 4.2
 
-v1.5
-- add progress bar for internal epg grab
-- add base tvh config parameters (set dvb scan files and channel icon paths)
+v1.6
+- add channel icons reset option
+- add function to backup/import Tvheadend userdata
 
     </description>
     <disclaimer>Copyright (C) 2017 edit4ever - edit4ever@gmail.com</disclaimer>
@@ -34,6 +34,10 @@ v1.5
         <screenshot>resources/screenshot-03.jpg</screenshot>
     </assets>
     <news>
+v1.5
+- add progress bar for internal epg grab
+- add base tvh config parameters (set dvb scan files and channel icon paths)
+
 v1.4
 - fix adapter network issue
 - add multiple network support to adapter
