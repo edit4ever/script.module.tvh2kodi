@@ -1705,6 +1705,11 @@ def tvh():
             icon_update_save = requests.get(icon_update_url)
     if sel_tvh == 7:
         dialog.ok("Tvheadend Userdata Backup", "The Tvheadend service will be stopped to start the backup.", "The Tvheadend client may show a connection error during the process.")
+        if tvh_url == "127.0.0.1":
+            tvh_addon = xbmcaddon.Addon(id='service.tvheadend42')
+            tvh_userdata_path = xbmc.translatePath(tvh_addon.getAddonInfo('profile'))
+        else:
+            tvh_userdata_path = '//' + tvh_url + '/userdata/addon_data/service.tvheadend42'
         try:
             tvh_json_url = 'http://' + tvh_url + ':8080/jsonrpc?request={"jsonrpc":"2.0","id":1,"method":"Addons.SetAddonEnabled","params":{"addonid":"service.tvheadend42","enabled":false}}'
             tvh_json_load = requests.get(tvh_json_url).json()
@@ -1713,11 +1718,6 @@ def tvh():
             dialog.ok("Tvheadend Service Still Running!", "Unable to stop the Tvheadend service.", "Unable to complete backup.")
             return
         if tvh_stop == "OK":
-            if tvh_url == "127.0.0.1":
-                tvh_addon = xbmcaddon.Addon(id='service.tvheadend42')
-                tvh_userdata_path = xbmc.translatePath(tvh_addon.getAddonInfo('profile'))
-            else:
-                tvh_userdata_path = '//' + tvh_url + '/userdata/addon_data/service.tvheadend42'
             output_path = dialog.browse(3, "Where would you like to save the Tvheadend Backup file?", "files")
             output_name = output_path + "service.tvheadend42-backup-" + str(datetime.datetime.today())
             if dialog.yesno('Backup Tvheadend Userdata to Zip File', 'Zip file will be created in the following location:', str(output_path), 'Select YES to create backup.'):
