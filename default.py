@@ -345,7 +345,67 @@ def dvr_file_param_edit(dvr_uuid_sel, dvr_file_info_list, dvr_day_dir, dvr_chann
             param_save = requests.get(param_url)
             dvr_file_param_load(dvr_uuid_sel)
 
-def mux_param_load_atsct(mux_uuid_sel):
+def muxes_load(net_uuid_sel):
+    net_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/load?uuid=' + str(net_uuid_sel)
+    net_load = requests.get(net_url).json()
+    net_class = net_load['entries'][0]['class']
+    muxes_url = 'http://' + tvh_url + ':' + tvh_port + '/api/mpegts/mux/grid?limit=999999999&filter=[{"type":"string","value":"' + net_uuid_sel + '","field":"network_uuid"}]'
+    muxes = requests.get(muxes_url).json()
+    muxes_name = []
+    muxes_uuid = []
+    muxes_enabled = []
+    muxes_network = []
+    muxes_frequency = []
+    for mux_n in muxes['entries']:
+        muxes_name.append(mux_n['name'])
+    for mux_u in muxes['entries']:
+        muxes_uuid.append(mux_u['uuid'])
+    for mux_w in muxes['entries']:
+        muxes_network.append(" in " + mux_w['network'])
+    try:
+        for mux_f in muxes['entries']:
+            muxes_frequency.append(mux_f['frequency'])
+    except:
+        for mux_f in muxes['entries']:
+            muxes_frequency.append(mux_f['channel_number'])
+    muxes_full = zip(muxes_name, muxes_network,)
+    muxes_list = ["%s %s" % x for x in muxes_full]
+    muxes_frequency, muxes_list, muxes_uuid = zip(*sorted(zip(muxes_frequency, muxes_list, muxes_uuid)))
+    create_mux = "CREATE NEW MUX"
+    muxes_list = list(muxes_list)
+    muxes_list.insert(0,create_mux)
+    muxes_list = tuple(muxes_list)
+    muxes_frequency = list(muxes_frequency)
+    muxes_frequency.insert(0,create_mux)
+    muxes_frequency = tuple(muxes_frequency)
+    muxes_uuid = list(muxes_uuid)
+    muxes_uuid.insert(0,create_mux)
+    muxes_uuid = tuple(muxes_uuid)
+    sel_mux = dialog.select('Select a mux to configure', list=muxes_list)
+    if sel_mux == 0:
+        if net_class == "iptv_network" or net_class == "iptv_auto_network":
+            mux_new_iptv(net_uuid_sel)
+        else:
+            mux_new()
+    if sel_mux >= 0:
+        mux_uuid_sel = muxes_uuid[sel_mux]
+        sel_mux_class_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/load?uuid=' + mux_uuid_sel
+        sel_mux_class_load = requests.get(sel_mux_class_url).json()
+        sel_mux_class = sel_mux_class_load['entries'][0]['class']
+        if sel_mux_class == "dvb_mux_atsc_t":
+            mux_param_load_atsct(mux_uuid_sel, net_uuid_sel)
+        if sel_mux_class == "dvb_mux_atsc_c":
+            mux_param_load_atscc(mux_uuid_sel, net_uuid_sel)
+        if sel_mux_class == "dvb_mux_dvbc":
+            mux_param_load_atscc(mux_uuid_sel, net_uuid_sel)
+        if sel_mux_class == "dvb_mux_dvbt":
+            mux_param_load_dvbt(mux_uuid_sel, net_uuid_sel)
+        if sel_mux_class == "dvb_mux_dvbs":
+            mux_param_load_dvbs(mux_uuid_sel, net_uuid_sel)
+        if sel_mux_class == "iptv_mux":
+            mux_param_load_iptv(mux_uuid_sel, net_uuid_sel)
+
+def mux_param_load_atsct(mux_uuid_sel, net_uuid_sel):
     mux_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/load?uuid=' + mux_uuid_sel
     mux_load = requests.get(mux_url).json()
     mux_name = mux_load['entries'][0]['text']
@@ -357,12 +417,12 @@ def mux_param_load_atsct(mux_uuid_sel):
     mux_services = find_param(mux_load, 'num_svc')
     mux_channels = find_param(mux_load, 'num_chn')
     mux_info_list = ["Enabled: " + str(mux_enabled), "Delivery System: " + str(mux_delsys), "Frequency: " + str(mux_frequency), "Modulation: " + str(mux_modulation), "Scan Status: " + str(mux_scanstate), "Number of Services: " + str(mux_services), "Number of Channels: " + str(mux_channels), "DELETE THE MUX"]
-    mux_param_edit_atsct(mux_uuid_sel, mux_info_list, mux_scanstate, mux_scanstate_key, mux_scanstate_val, mux_frequency, mux_modulation, mux_modulation_key, mux_modulation_val, mux_enabled, mux_enabled_key, mux_enabled_val, mux_delsys, mux_delsys_list, mux_name, mux_services, mux_channels)
+    mux_param_edit_atsct(mux_uuid_sel, mux_info_list, mux_scanstate, mux_scanstate_key, mux_scanstate_val, mux_frequency, mux_modulation, mux_modulation_key, mux_modulation_val, mux_enabled, mux_enabled_key, mux_enabled_val, mux_delsys, mux_delsys_list, mux_name, mux_services, mux_channels, net_uuid_sel)
 
-def mux_param_edit_atsct(mux_uuid_sel, mux_info_list, mux_scanstate, mux_scanstate_key, mux_scanstate_val, mux_frequency, mux_modulation, mux_modulation_key, mux_modulation_val, mux_enabled, mux_enabled_key, mux_enabled_val, mux_delsys, mux_delsys_list, mux_name, mux_services, mux_channels):
+def mux_param_edit_atsct(mux_uuid_sel, mux_info_list, mux_scanstate, mux_scanstate_key, mux_scanstate_val, mux_frequency, mux_modulation, mux_modulation_key, mux_modulation_val, mux_enabled, mux_enabled_key, mux_enabled_val, mux_delsys, mux_delsys_list, mux_name, mux_services, mux_channels, net_uuid_sel):
     if mux_scanstate == "ACTIVE":
         sel_param = dialog.select(str(mux_name) + ' - Select parameter to edit', list=mux_info_list, autoclose=4000)
-        mux_param_load_atsct(mux_uuid_sel)
+        mux_param_load_atsct(mux_uuid_sel, net_uuid_sel)
     sel_param = dialog.select(str(mux_name) + ' - Select parameter to edit', list=mux_info_list)
     if sel_param < 0:
         muxes()
@@ -371,14 +431,14 @@ def mux_param_edit_atsct(mux_uuid_sel, mux_info_list, mux_scanstate, mux_scansta
         if sel_param == 0:
             sel_enabled = dialog.select('Enable or disable the mux', list=mux_enabled_val)
             if sel_enabled <0:
-                mux_param_load_atsct(mux_uuid_sel)
+                mux_param_load_atsct(mux_uuid_sel, net_uuid_sel)
             if sel_enabled >= 0:
                 mux_enabled = mux_enabled_key[sel_enabled]
                 param_update = '"enabled":' + str(mux_enabled)
         if sel_param == 1:
             sel_enabled = dialog.select('Select the mux delivery system', list=mux_delsys_list)
             if sel_enabled <0:
-                mux_param_load_atsct(mux_uuid_sel)
+                mux_param_load_atsct(mux_uuid_sel, net_uuid_sel)
             if sel_enabled >= 0:
                 mux_delsys = mux_delsys_list[sel_enabled]
                 param_update = '"delsys":"' + str(mux_delsys + '"')
@@ -388,14 +448,14 @@ def mux_param_edit_atsct(mux_uuid_sel, mux_info_list, mux_scanstate, mux_scansta
         if sel_param == 3:
             sel_mux_modulation = dialog.select('Select the modulation of the mux', list=mux_modulation_val)
             if sel_mux_modulation <0:
-                mux_param_load_atsct(mux_uuid_sel)
+                mux_param_load_atsct(mux_uuid_sel, net_uuid_sel)
             if sel_mux_modulation >= 0:
                 mux_modulation = mux_modulation_key[sel_mux_modulation]
                 param_update = '"modulation":"' + str(mux_modulation) + '"'
         if sel_param == 4:
             sel_mux_scanstate = dialog.select('Set the scan state of the mux', list=mux_scanstate_val)
             if sel_mux_scanstate <0:
-                mux_param_load_atsct(mux_uuid_sel)
+                mux_param_load_atsct(mux_uuid_sel, net_uuid_sel)
             if sel_mux_scanstate >= 0:
                 mux_scanstate = mux_scanstate_key[sel_mux_scanstate]
                 param_update = '"scan_state":' + str(mux_scanstate)
@@ -405,13 +465,13 @@ def mux_param_edit_atsct(mux_uuid_sel, mux_info_list, mux_scanstate, mux_scansta
                 return
             delete_mux_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/delete?uuid=["' + mux_uuid_sel +'"]'
             delete_mux = requests.get(delete_mux_url)
-            muxes()
+            muxes_load(net_uuid_sel)
         if param_update != "":
             param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/save?node={' + param_update + ',"uuid":"' + mux_uuid_sel + '"}'
             param_save = requests.get(param_url)
-            mux_param_load_atsct(mux_uuid_sel)
+            mux_param_load_atsct(mux_uuid_sel, net_uuid_sel)
 
-def mux_param_load_atscc(mux_uuid_sel):
+def mux_param_load_atscc(mux_uuid_sel, net_uuid_sel):
     mux_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/load?uuid=' + mux_uuid_sel
     mux_load = requests.get(mux_url).json()
     mux_name = mux_load['entries'][0]['text']
@@ -424,12 +484,12 @@ def mux_param_load_atscc(mux_uuid_sel):
     mux_services = find_param(mux_load, 'num_svc')
     mux_channels = find_param(mux_load, 'num_chn')
     mux_info_list = ["Enabled: " + str(mux_enabled), "Delivery System: " + str(mux_delsys), "Frequency: " + str(mux_frequency), "Symbol Rate: " + str(mux_symbolrate), "Modulation: " + str(mux_modulation), "Scan Status: " + str(mux_scanstate), "Number of Services: " + str(mux_services), "Number of Channels: " + str(mux_channels), "DELETE THE MUX"]
-    mux_param_edit_atscc(mux_uuid_sel, mux_info_list, mux_scanstate, mux_scanstate_key, mux_scanstate_val, mux_frequency, mux_symbolrate, mux_modulation, mux_modulation_key, mux_modulation_val, mux_enabled, mux_enabled_key, mux_enabled_val, mux_delsys, mux_delsys_list, mux_name, mux_services, mux_channels)
+    mux_param_edit_atscc(mux_uuid_sel, mux_info_list, mux_scanstate, mux_scanstate_key, mux_scanstate_val, mux_frequency, mux_symbolrate, mux_modulation, mux_modulation_key, mux_modulation_val, mux_enabled, mux_enabled_key, mux_enabled_val, mux_delsys, mux_delsys_list, mux_name, mux_services, mux_channels, net_uuid_sel)
 
-def mux_param_edit_atscc(mux_uuid_sel, mux_info_list, mux_scanstate, mux_scanstate_key, mux_scanstate_val, mux_frequency, mux_symbolrate, mux_modulation, mux_modulation_key, mux_modulation_val, mux_enabled, mux_enabled_key, mux_enabled_val, mux_delsys, mux_delsys_list, mux_name, mux_services, mux_channels):
+def mux_param_edit_atscc(mux_uuid_sel, mux_info_list, mux_scanstate, mux_scanstate_key, mux_scanstate_val, mux_frequency, mux_symbolrate, mux_modulation, mux_modulation_key, mux_modulation_val, mux_enabled, mux_enabled_key, mux_enabled_val, mux_delsys, mux_delsys_list, mux_name, mux_services, mux_channels, net_uuid_sel):
     if mux_scanstate == "ACTIVE":
         sel_param = dialog.select(str(mux_name) + ' - Select parameter to edit', list=mux_info_list, autoclose=4000)
-        mux_param_load_atscc(mux_uuid_sel)
+        mux_param_load_atscc(mux_uuid_sel, net_uuid_sel)
     sel_param = dialog.select(str(mux_name) + ' - Select parameter to edit', list=mux_info_list)
     if sel_param < 0:
         muxes()
@@ -438,14 +498,14 @@ def mux_param_edit_atscc(mux_uuid_sel, mux_info_list, mux_scanstate, mux_scansta
         if sel_param == 0:
             sel_enabled = dialog.select('Enable or disable the mux', list=mux_enabled_val)
             if sel_enabled <0:
-                mux_param_load_atscc(mux_uuid_sel)
+                mux_param_load_atscc(mux_uuid_sel, net_uuid_sel)
             if sel_enabled >= 0:
                 mux_enabled = mux_enabled_key[sel_enabled]
                 param_update = '"enabled":' + str(mux_enabled)
         if sel_param == 1:
             sel_enabled = dialog.select('Select the mux delivery system', list=mux_delsys_list)
             if sel_enabled <0:
-                mux_param_load_atscc(mux_uuid_sel)
+                mux_param_load_atscc(mux_uuid_sel, net_uuid_sel)
             if sel_enabled >= 0:
                 mux_delsys = mux_delsys_list[sel_enabled]
                 param_update = '"delsys":"' + str(mux_delsys + '"')
@@ -458,30 +518,30 @@ def mux_param_edit_atscc(mux_uuid_sel, mux_info_list, mux_scanstate, mux_scansta
         if sel_param == 4:
             sel_mux_modulation = dialog.select('Select the modulation of the mux', list=mux_modulation_val)
             if sel_mux_modulation <0:
-                mux_param_load_atscc(mux_uuid_sel)
+                mux_param_load_atscc(mux_uuid_sel, net_uuid_sel)
             if sel_mux_modulation >= 0:
                 mux_modulation = mux_modulation_key[sel_mux_modulation]
                 param_update = '"constellation":"' + str(mux_modulation) + '"'
         if sel_param == 5:
             sel_mux_scanstate = dialog.select('Set the scan state of the mux', list=mux_scanstate_val)
             if sel_mux_scanstate <0:
-                mux_param_load_atscc(mux_uuid_sel)
+                mux_param_load_atscc(mux_uuid_sel, net_uuid_sel)
             if sel_mux_scanstate >= 0:
                 mux_scanstate = mux_scanstate_key[sel_mux_scanstate]
                 param_update = '"scan_state":' + str(mux_scanstate)
         if sel_param == 8:
             confirm_del = dialog.yesno('Confirm mux delete', 'Are you sure want to delete the ' + mux_name + ' mux?')
             if not confirm_del:
-                mux_param_load_atscc(mux_uuid_sel)
+                mux_param_load_atscc(mux_uuid_sel, net_uuid_sel)
             delete_mux_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/delete?uuid=["' + mux_uuid_sel +'"]'
             delete_mux = requests.get(delete_mux_url)
-            muxes()
+            muxes_load(net_uuid_sel)
         if param_update != "":
             param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/save?node={' + param_update + ',"uuid":"' + mux_uuid_sel + '"}'
             param_save = requests.get(param_url)
-            mux_param_load_atscc(mux_uuid_sel)
+            mux_param_load_atscc(mux_uuid_sel, net_uuid_sel)
 
-def mux_param_load_dvbt(mux_uuid_sel):
+def mux_param_load_dvbt(mux_uuid_sel, net_uuid_sel):
     mux_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/load?uuid=' + mux_uuid_sel
     mux_load = requests.get(mux_url).json()
     mux_name = mux_load['entries'][0]['text']
@@ -500,12 +560,12 @@ def mux_param_load_dvbt(mux_uuid_sel):
     mux_services = find_param(mux_load, 'num_svc')
     mux_channels = find_param(mux_load, 'num_chn')
     mux_info_list = ["Enabled: " + str(mux_enabled), "Delivery System: " + str(mux_delsys), "Frequency: " + str(mux_frequency), "Bandwidth: " + str(mux_bandwidth), "COFDM Modulation: " + str(mux_modulation), "Transmission Mode: " + str(mux_transmission), "Guard Interval: " + str(mux_guard), "Hierarchy: " + str(mux_hierarchy), "FEC High: " + str(mux_fec_hi), "FEC Low: " + str(mux_fec_lo), "PLP ID: " + str(mux_plp_id), "Scan Status: " + str(mux_scanstate), "Number of Services: " + str(mux_services), "Number of Channels: " + str(mux_channels), "DELETE THE MUX"]
-    mux_param_edit_dvbt(mux_uuid_sel, mux_info_list, mux_plp_id, mux_fec_lo, mux_fec_lo_key, mux_fec_lo_val, mux_fec_hi, mux_fec_hi_key, mux_fec_hi_val, mux_hierarchy, mux_hierarchy_key, mux_hierarchy_val, mux_guard, mux_guard_key, mux_guard_val, mux_transmission, mux_transmission_key, mux_transmission_val, mux_scanstate, mux_scanstate_key, mux_scanstate_val, mux_frequency, mux_bandwidth, mux_bandwidth_key, mux_bandwidth_val, mux_modulation, mux_modulation_key, mux_modulation_val, mux_enabled, mux_enabled_key, mux_enabled_val, mux_delsys, mux_delsys_list, mux_name, mux_services, mux_channels)
+    mux_param_edit_dvbt(mux_uuid_sel, mux_info_list, mux_plp_id, mux_fec_lo, mux_fec_lo_key, mux_fec_lo_val, mux_fec_hi, mux_fec_hi_key, mux_fec_hi_val, mux_hierarchy, mux_hierarchy_key, mux_hierarchy_val, mux_guard, mux_guard_key, mux_guard_val, mux_transmission, mux_transmission_key, mux_transmission_val, mux_scanstate, mux_scanstate_key, mux_scanstate_val, mux_frequency, mux_bandwidth, mux_bandwidth_key, mux_bandwidth_val, mux_modulation, mux_modulation_key, mux_modulation_val, mux_enabled, mux_enabled_key, mux_enabled_val, mux_delsys, mux_delsys_list, mux_name, mux_services, mux_channels, net_uuid_sel)
 
-def mux_param_edit_dvbt(mux_uuid_sel, mux_info_list, mux_plp_id, mux_fec_lo, mux_fec_lo_key, mux_fec_lo_val, mux_fec_hi, mux_fec_hi_key, mux_fec_hi_val, mux_hierarchy, mux_hierarchy_key, mux_hierarchy_val, mux_guard, mux_guard_key, mux_guard_val, mux_transmission, mux_transmission_key, mux_transmission_val, mux_scanstate, mux_scanstate_key, mux_scanstate_val, mux_frequency, mux_bandwidth, mux_bandwidth_key, mux_bandwidth_val, mux_modulation, mux_modulation_key, mux_modulation_val, mux_enabled, mux_enabled_key, mux_enabled_val, mux_delsys, mux_delsys_list, mux_name, mux_services, mux_channels):
+def mux_param_edit_dvbt(mux_uuid_sel, mux_info_list, mux_plp_id, mux_fec_lo, mux_fec_lo_key, mux_fec_lo_val, mux_fec_hi, mux_fec_hi_key, mux_fec_hi_val, mux_hierarchy, mux_hierarchy_key, mux_hierarchy_val, mux_guard, mux_guard_key, mux_guard_val, mux_transmission, mux_transmission_key, mux_transmission_val, mux_scanstate, mux_scanstate_key, mux_scanstate_val, mux_frequency, mux_bandwidth, mux_bandwidth_key, mux_bandwidth_val, mux_modulation, mux_modulation_key, mux_modulation_val, mux_enabled, mux_enabled_key, mux_enabled_val, mux_delsys, mux_delsys_list, mux_name, mux_services, mux_channels, net_uuid_sel):
     if mux_scanstate == "ACTIVE":
         sel_param = dialog.select(str(mux_name) + ' - Select parameter to edit', list=mux_info_list, autoclose=4000)
-        mux_param_load_dvbt(mux_uuid_sel)
+        mux_param_load_dvbt(mux_uuid_sel, net_uuid_sel)
     sel_param = dialog.select(str(mux_name) + ' - Select parameter to edit', list=mux_info_list)
     if sel_param < 0:
         muxes()
@@ -514,14 +574,14 @@ def mux_param_edit_dvbt(mux_uuid_sel, mux_info_list, mux_plp_id, mux_fec_lo, mux
         if sel_param == 0:
             sel_enabled = dialog.select('Enable or disable the mux', list=mux_enabled_val)
             if sel_enabled <0:
-                mux_param_load_dvbt(mux_uuid_sel)
+                mux_param_load_dvbt(mux_uuid_sel, net_uuid_sel)
             if sel_enabled >= 0:
                 mux_enabled = mux_enabled_key[sel_enabled]
                 param_update = '"enabled":' + str(mux_enabled)
         if sel_param == 1:
             sel_enabled = dialog.select('Select the mux delivery system', list=mux_delsys_list)
             if sel_enabled <0:
-                mux_param_load_dvbt(mux_uuid_sel)
+                mux_param_load_dvbt(mux_uuid_sel, net_uuid_sel)
             if sel_enabled >= 0:
                 mux_delsys = mux_delsys_list[sel_enabled]
                 param_update = '"delsys":"' + str(mux_delsys + '"')
@@ -531,49 +591,49 @@ def mux_param_edit_dvbt(mux_uuid_sel, mux_info_list, mux_plp_id, mux_fec_lo, mux
         if sel_param == 3:
             sel_mux_bandwidth = dialog.select('Select the mux bandwidth', list=mux_bandwidth_val)
             if sel_mux_bandwidth <0:
-                mux_param_load_dvbt(mux_uuid_sel)
+                mux_param_load_dvbt(mux_uuid_sel, net_uuid_sel)
             if sel_mux_bandwidth >= 0:
                 mux_bandwidth = mux_bandwidth_key[sel_mux_bandwidth]
                 param_update = '"bandwidth":"' + str(mux_bandwidth) + '"'
         if sel_param == 4:
             sel_mux_modulation = dialog.select('Select the COFDM modulation of the mux', list=mux_modulation_val)
             if sel_mux_modulation <0:
-                mux_param_load_dvbt(mux_uuid_sel)
+                mux_param_load_dvbt(mux_uuid_sel, net_uuid_sel)
             if sel_mux_modulation >= 0:
                 mux_modulation = mux_modulation_key[sel_mux_modulation]
                 param_update = '"modulation":"' + str(mux_modulation) + '"'
         if sel_param == 5:
             sel_mux_transmission = dialog.select('Select the mux transmission mode', list=mux_transmission_val)
             if sel_mux_transmission <0:
-                mux_param_load_dvbt(mux_uuid_sel)
+                mux_param_load_dvbt(mux_uuid_sel, net_uuid_sel)
             if sel_mux_transmission >= 0:
                 mux_transmission = mux_transmission_key[sel_mux_transmission]
                 param_update = '"transmission_mode":"' + str(mux_transmission) + '"'
         if sel_param == 6:
             sel_mux_guard = dialog.select('Select the mux guard interval', list=mux_guard_val)
             if sel_mux_guard <0:
-                mux_param_load_dvbt(mux_uuid_sel)
+                mux_param_load_dvbt(mux_uuid_sel, net_uuid_sel)
             if sel_mux_guard >= 0:
                 mux_guard = mux_guard_key[sel_mux_guard]
                 param_update = '"guard_interval":"' + str(mux_guard) + '"'
         if sel_param == 7:
             sel_mux_hierarchy = dialog.select('Select the mux hierarchy', list=mux_hierarchy_val)
             if sel_mux_hierarchy <0:
-                mux_param_load_dvbt(mux_uuid_sel)
+                mux_param_load_dvbt(mux_uuid_sel, net_uuid_sel)
             if sel_mux_hierarchy >= 0:
                 mux_hierarchy = mux_hierarchy_key[sel_mux_hierarchy]
                 param_update = '"hierarchy":"' + str(mux_hierarchy) + '"'
         if sel_param == 8:
             sel_mux_fec_hi = dialog.select('Select the mux forward error correction high', list=mux_fec_hi_val)
             if sel_mux_fec_hi <0:
-                mux_param_load_dvbt(mux_uuid_sel)
+                mux_param_load_dvbt(mux_uuid_sel, net_uuid_sel)
             if sel_mux_fec_hi >= 0:
                 mux_fec_hi = mux_fec_hi_key[sel_mux_fec_hi]
                 param_update = '"fec_hi":"' + str(mux_fec_hi) + '"'
         if sel_param == 9:
             sel_mux_fec_lo = dialog.select('Select the mux forward error correction low', list=mux_fec_lo_val)
             if sel_mux_fec_lo <0:
-                mux_param_load_dvbt(mux_uuid_sel)
+                mux_param_load_dvbt(mux_uuid_sel, net_uuid_sel)
             if sel_mux_fec_lo >= 0:
                 mux_fec_lo = mux_fec_lo_key[sel_mux_fec_lo]
                 param_update = '"fec_lo":"' + str(mux_fec_lo) + '"'
@@ -586,7 +646,7 @@ def mux_param_edit_dvbt(mux_uuid_sel, mux_info_list, mux_plp_id, mux_fec_lo, mux
         if sel_param == 11:
             sel_mux_scanstate = dialog.select('Set the scan state of the mux', list=mux_scanstate_val)
             if sel_mux_scanstate <0:
-                mux_param_load_dvbt(mux_uuid_sel)
+                mux_param_load_dvbt(mux_uuid_sel, net_uuid_sel)
             if sel_mux_scanstate >= 0:
                 mux_scanstate = mux_scanstate_key[sel_mux_scanstate]
                 param_update = '"scan_state":' + str(mux_scanstate)
@@ -596,13 +656,13 @@ def mux_param_edit_dvbt(mux_uuid_sel, mux_info_list, mux_plp_id, mux_fec_lo, mux
                 return
             delete_mux_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/delete?uuid=["' + mux_uuid_sel +'"]'
             delete_mux = requests.get(delete_mux_url)
-            muxes()
+            muxes_load(net_uuid_sel)
         if param_update != "":
             param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/save?node={' + param_update + ',"uuid":"' + mux_uuid_sel + '"}'
             param_save = requests.get(param_url)
-            mux_param_load_dvbt(mux_uuid_sel)
+            mux_param_load_dvbt(mux_uuid_sel, net_uuid_sel)
 
-def mux_param_load_dvbs(mux_uuid_sel):
+def mux_param_load_dvbs(mux_uuid_sel, net_uuid_sel):
     mux_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/load?uuid=' + mux_uuid_sel
     mux_load = requests.get(mux_url).json()
     mux_name = mux_load['entries'][0]['text']
@@ -623,12 +683,12 @@ def mux_param_load_dvbs(mux_uuid_sel):
     mux_services = find_param(mux_load, 'num_svc')
     mux_channels = find_param(mux_load, 'num_chn')
     mux_info_list = ["Enabled: " + str(mux_enabled), "Delivery System: " + str(mux_delsys), "Frequency: " + str(mux_frequency), "Symbol Rate: " + str(mux_symbolrate), "Polarization: " + str(mux_polarization), "Modulation: " + str(mux_modulation), "FEC: " + str(mux_fec), "Rolloff: " + str(mux_rolloff), "Pilot: " + str(mux_pilot), "Service ID: " + str(mux_sidfilter), "ISI Stream ID: " + str(mux_streamid), "PLS Mode: " + str(mux_plsmode), "PLS Code: " + str(mux_plscode), "Scan Status: " + str(mux_scanstate), "Number of Services: " + str(mux_services), "Number of Channels: " + str(mux_channels), "DELETE THE MUX"]
-    mux_param_edit_dvbs(mux_uuid_sel, mux_info_list, mux_sidfilter, mux_streamid, mux_polarization, mux_polarization_key, mux_polarization_val, mux_symbolrate, mux_plscode, mux_fec, mux_fec_key, mux_fec_val, mux_plsmode, mux_plsmode_key, mux_plsmode_val, mux_pilot, mux_pilot_key, mux_pilot_val, mux_scanstate, mux_scanstate_key, mux_scanstate_val, mux_frequency, mux_rolloff, mux_rolloff_key, mux_rolloff_val, mux_modulation, mux_modulation_key, mux_modulation_val, mux_enabled, mux_enabled_key, mux_enabled_val, mux_delsys, mux_delsys_list, mux_name, mux_services, mux_channels)
+    mux_param_edit_dvbs(mux_uuid_sel, mux_info_list, mux_sidfilter, mux_streamid, mux_polarization, mux_polarization_key, mux_polarization_val, mux_symbolrate, mux_plscode, mux_fec, mux_fec_key, mux_fec_val, mux_plsmode, mux_plsmode_key, mux_plsmode_val, mux_pilot, mux_pilot_key, mux_pilot_val, mux_scanstate, mux_scanstate_key, mux_scanstate_val, mux_frequency, mux_rolloff, mux_rolloff_key, mux_rolloff_val, mux_modulation, mux_modulation_key, mux_modulation_val, mux_enabled, mux_enabled_key, mux_enabled_val, mux_delsys, mux_delsys_list, mux_name, mux_services, mux_channels, net_uuid_sel)
 
-def mux_param_edit_dvbs(mux_uuid_sel, mux_info_list, mux_sidfilter, mux_streamid, mux_polarization, mux_polarization_key, mux_polarization_val, mux_symbolrate, mux_plscode, mux_fec, mux_fec_key, mux_fec_val, mux_plsmode, mux_plsmode_key, mux_plsmode_val, mux_pilot, mux_pilot_key, mux_pilot_val, mux_scanstate, mux_scanstate_key, mux_scanstate_val, mux_frequency, mux_rolloff, mux_rolloff_key, mux_rolloff_val, mux_modulation, mux_modulation_key, mux_modulation_val, mux_enabled, mux_enabled_key, mux_enabled_val, mux_delsys, mux_delsys_list, mux_name, mux_services, mux_channels):
+def mux_param_edit_dvbs(mux_uuid_sel, mux_info_list, mux_sidfilter, mux_streamid, mux_polarization, mux_polarization_key, mux_polarization_val, mux_symbolrate, mux_plscode, mux_fec, mux_fec_key, mux_fec_val, mux_plsmode, mux_plsmode_key, mux_plsmode_val, mux_pilot, mux_pilot_key, mux_pilot_val, mux_scanstate, mux_scanstate_key, mux_scanstate_val, mux_frequency, mux_rolloff, mux_rolloff_key, mux_rolloff_val, mux_modulation, mux_modulation_key, mux_modulation_val, mux_enabled, mux_enabled_key, mux_enabled_val, mux_delsys, mux_delsys_list, mux_name, mux_services, mux_channels, net_uuid_sel):
     if mux_scanstate == "ACTIVE":
         sel_param = dialog.select(str(mux_name) + ' - Select parameter to edit', list=mux_info_list, autoclose=4000)
-        mux_param_load_dvbs(mux_uuid_sel)
+        mux_param_load_dvbs(mux_uuid_sel, net_uuid_sel)
     sel_param = dialog.select(str(mux_name) + ' - Select parameter to edit', list=mux_info_list)
     if sel_param < 0:
         muxes()
@@ -637,14 +697,14 @@ def mux_param_edit_dvbs(mux_uuid_sel, mux_info_list, mux_sidfilter, mux_streamid
         if sel_param == 0:
             sel_enabled = dialog.select('Enable or disable the mux', list=mux_enabled_val)
             if sel_enabled <0:
-                mux_param_load_dvbs(mux_uuid_sel)
+                mux_param_load_dvbs(mux_uuid_sel, net_uuid_sel)
             if sel_enabled >= 0:
                 mux_enabled = mux_enabled_key[sel_enabled]
                 param_update = '"enabled":' + str(mux_enabled)
         if sel_param == 1:
             sel_enabled = dialog.select('Select the mux delivery system', list=mux_delsys_list)
             if sel_enabled <0:
-                mux_param_load_dvbs(mux_uuid_sel)
+                mux_param_load_dvbs(mux_uuid_sel, net_uuid_sel)
             if sel_enabled >= 0:
                 mux_delsys = mux_delsys_list[sel_enabled]
                 param_update = '"delsys":"' + str(mux_delsys + '"')
@@ -657,81 +717,163 @@ def mux_param_edit_dvbs(mux_uuid_sel, mux_info_list, mux_sidfilter, mux_streamid
         if sel_param == 4:
             sel_mux_polarization = dialog.select('Select the polarization of the mux', list=mux_polarization_val)
             if sel_mux_polarization <0:
-                mux_param_load_dvbs(mux_uuid_sel)
+                mux_param_load_dvbs(mux_uuid_sel, net_uuid_sel)
             if sel_mux_polarization >= 0:
                 mux_polarization = mux_polarization_key[sel_mux_polarization]
                 param_update = '"polarisation":"' + str(mux_polarization) + '"'
         if sel_param == 5:
             sel_mux_modulation = dialog.select('Select the modulation of the mux', list=mux_modulation_val)
             if sel_mux_modulation <0:
-                mux_param_load_dvbs(mux_uuid_sel)
+                mux_param_load_dvbs(mux_uuid_sel, net_uuid_sel)
             if sel_mux_modulation >= 0:
                 mux_modulation = mux_modulation_key[sel_mux_modulation]
                 param_update = '"modulation":"' + str(mux_modulation) + '"'
         if sel_param == 6:
             sel_mux_fec = dialog.select('Select the mux forward error correction', list=mux_fec_val)
             if sel_mux_fec <0:
-                mux_param_load_dvbs(mux_uuid_sel)
+                mux_param_load_dvbs(mux_uuid_sel, net_uuid_sel)
             if sel_mux_fec >= 0:
                 mux_fec = mux_fec_key[sel_mux_fec]
                 param_update = '"fec":"' + str(mux_fec) + '"'
         if sel_param == 7:
             sel_mux_rolloff = dialog.select('Select the mux rolloff', list=mux_rolloff_val)
             if sel_mux_rolloff <0:
-                mux_param_load_dvbs(mux_uuid_sel)
+                mux_param_load_dvbs(mux_uuid_sel, net_uuid_sel)
             if sel_mux_rolloff >= 0:
                 mux_rolloff = mux_rolloff_key[sel_mux_rolloff]
                 param_update = '"rolloff":"' + str(mux_rolloff) + '"'
         if sel_param == 8:
             sel_mux_pilot = dialog.select('Select the mux pilot', list=mux_pilot_val)
             if sel_mux_pilot <0:
-                mux_param_load_dvbs(mux_uuid_sel)
+                mux_param_load_dvbs(mux_uuid_sel, net_uuid_sel)
             if sel_mux_pilot >= 0:
                 mux_pilot = mux_pilot_key[sel_mux_pilot]
                 param_update = '"pilot":"' + str(mux_pilot) + '"'
         if sel_param == 9:
             sel_mux_sidfilter = dialog.input('Edit the mux Service ID - filter out others', defaultt=str(mux_sidfilter),type=xbmcgui.INPUT_ALPHANUM)
             if sel_mux_sidfilter == "":
-                mux_param_load_dvbs(mux_uuid_sel)
+                mux_param_load_dvbs(mux_uuid_sel, net_uuid_sel)
             else:
                 param_update = '"sid_filter":' + sel_mux_sidfilter
         if sel_param == 10:
             sel_mux_streamid = dialog.input('Edit the mux Stream ID', defaultt=str(mux_streamid),type=xbmcgui.INPUT_ALPHANUM)
             if sel_mux_streamid == "":
-                mux_param_load_dvbs(mux_uuid_sel)
+                mux_param_load_dvbs(mux_uuid_sel, net_uuid_sel)
             else:
                 param_update = '"stream_id":' + sel_mux_streamid
         if sel_param == 11:
             sel_mux_plsmode = dialog.select('Select the mux bandwidth', list=mux_plsmode_val)
             if sel_mux_plsmode <0:
-                mux_param_load_dvbs(mux_uuid_sel)
+                mux_param_load_dvbs(mux_uuid_sel, net_uuid_sel)
             if sel_mux_plsmode >= 0:
                 mux_plsmode = mux_plsmode_key[sel_mux_plsmode]
                 param_update = '"pls_mode":"' + str(mux_plsmode) + '"'
         if sel_param == 12:
             sel_mux_plscode = dialog.input('Edit the mux PLS Code', defaultt=str(mux_plscode),type=xbmcgui.INPUT_ALPHANUM)
             if sel_mux_plscode == "":
-                mux_param_load_dvbs(mux_uuid_sel)
+                mux_param_load_dvbs(mux_uuid_sel, net_uuid_sel)
             else:
                 param_update = '"pls_code":' + sel_mux_plscode
         if sel_param == 13:
             sel_mux_scanstate = dialog.select('Set the scan state of the mux', list=mux_scanstate_val)
             if sel_mux_scanstate <0:
-                mux_param_load_(mux_uuid_sel)
+                mux_param_load_(mux_uuid_sel, net_uuid_sel)
             if sel_mux_scanstate >= 0:
                 mux_scanstate = mux_scanstate_key[sel_mux_scanstate]
                 param_update = '"scan_state":' + str(mux_scanstate)
-        if sel_param == 14:
+        if sel_param == 16:
             confirm_del = dialog.yesno('Confirm mux delete', 'Are you sure want to delete the ' + mux_name + ' mux?')
             if not confirm_del:
                 return
             delete_mux_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/delete?uuid=["' + mux_uuid_sel +'"]'
             delete_mux = requests.get(delete_mux_url)
-            muxes()
+            muxes_load(net_uuid_sel)
         if param_update != "":
             param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/save?node={' + param_update + ',"uuid":"' + mux_uuid_sel + '"}'
             param_save = requests.get(param_url)
-            mux_param_load_dvbs(mux_uuid_sel)
+            mux_param_load_dvbs(mux_uuid_sel, net_uuid_sel)
+
+def mux_param_load_iptv(mux_uuid_sel, net_uuid_sel):
+    mux_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/load?uuid=' + mux_uuid_sel
+    mux_load = requests.get(mux_url).json()
+    mux_name = mux_load['entries'][0]['text']
+    mux_enabled, mux_enabled_key, mux_enabled_val = find_param_dict(mux_load, 'enabled', 'enum')
+    mux_iptv_muxname = find_param(mux_load, 'iptv_muxname')
+    mux_url = find_param(mux_load, 'iptv_url')
+    mux_atsc = find_param(mux_load, 'iptv_atsc')
+    mux_chnum = find_param(mux_load, 'channel_number')
+    mux_channels = find_param(mux_load, 'num_chn')
+    mux_sname= find_param(mux_load, 'iptv_sname')
+    mux_services = find_param(mux_load, 'num_svc')
+    mux_scanstate, mux_scanstate_key, mux_scanstate_val = find_param_dict(mux_load, 'scan_state', 'enum')
+    mux_info_list = ["Enabled: " + str(mux_enabled), "URL: " + str(mux_url), "ATSC: " + str(mux_atsc), "Name: " + (mux_iptv_muxname),  "Channel Number: " + str(mux_chnum), "Service Name: " + str(mux_sname), "Scan Status: " + str(mux_scanstate), "Number of Services: " + str(mux_services), "Number of Channels: " + str(mux_channels), "DELETE THE MUX"]
+    mux_param_edit_iptv(mux_uuid_sel, mux_info_list, mux_scanstate, mux_scanstate_key, mux_scanstate_val, mux_enabled, mux_enabled_key, mux_enabled_val, mux_name, mux_services, mux_channels, mux_url, mux_atsc, mux_iptv_muxname, mux_chnum, mux_sname, net_uuid_sel)
+
+def mux_param_edit_iptv(mux_uuid_sel, mux_info_list, mux_scanstate, mux_scanstate_key, mux_scanstate_val, mux_enabled, mux_enabled_key, mux_enabled_val, mux_name, mux_services, mux_channels, mux_url, mux_atsc, mux_iptv_muxname, mux_chnum, mux_sname, net_uuid_sel):
+    if mux_scanstate == "ACTIVE":
+        sel_param = dialog.select(str(mux_name) + ' - Select parameter to edit', list=mux_info_list, autoclose=4000)
+        mux_param_load_iptv(mux_uuid_sel, net_uuid_sel)
+    sel_param = dialog.select(str(mux_name) + ' - Select parameter to edit', list=mux_info_list)
+    if sel_param < 0:
+        muxes()
+    if sel_param >= 0:
+        param_update = ""
+        if sel_param == 0:
+            sel_enabled = dialog.select('Enable or disable the mux', list=mux_enabled_val)
+            if sel_enabled <0:
+                mux_param_load_iptv(mux_uuid_sel, net_uuid_sel)
+            if sel_enabled >= 0:
+                mux_enabled = mux_enabled_key[sel_enabled]
+                param_update = '"enabled":' + str(mux_enabled)
+        if sel_param == 1:
+            sel_mux_url = dialog.input('Edit the mux URL', defaultt=str(mux_url),type=xbmcgui.INPUT_ALPHANUM)
+            if sel_mux_url == "":
+                mux_param_load_iptv(mux_uuid_sel, net_uuid_sel)
+            else:
+                param_update = '"url":"' + sel_mux_url + '"'
+        if sel_param == 2:
+            sel_atsc = dialog.select('Change if IPTV mux is ATSC', list=truefalse)
+            if sel_atsc <0:
+                mux_param_load_iptv(mux_uuid_sel, net_uuid_sel)
+            if sel_atsc >= 0:
+                mux_atsc = truefalse[sel_atsc]
+                param_update = '"iptv_atsc":' + str(mux_atsc)
+        if sel_param == 3:
+            sel_mux_name = dialog.input('Edit the mux name', defaultt=str(mux_iptv_muxname),type=xbmcgui.INPUT_ALPHANUM)
+            if sel_mux_name == "":
+                mux_param_load_iptv(mux_uuid_sel, net_uuid_sel)
+            else:
+                param_update = '"iptv_muxname":"' + sel_mux_name + '"'
+        if sel_param == 4:
+            sel_mux_chnum = dialog.input('Edit the mux channel number', defaultt=str(mux_chnum),type=xbmcgui.INPUT_NUMERIC)
+            if sel_mux_chnum == "":
+                mux_param_load_iptv(mux_uuid_sel, net_uuid_sel)
+            else:
+                param_update = '"channel_number":' + sel_mux_chnum
+        if sel_param == 5:
+            sel_mux_sname = dialog.input('Edit the mux service name', defaultt=str(mux_sname),type=xbmcgui.INPUT_ALPHANUM)
+            if sel_mux_sname == "":
+                mux_param_load_iptv(mux_uuid_sel, net_uuid_sel)
+            else:
+                param_update = '"iptv_sname":"' + sel_mux_sname + '"'
+        if sel_param == 6:
+            sel_mux_scanstate = dialog.select('Set the scan state of the mux', list=mux_scanstate_val)
+            if sel_mux_scanstate <0:
+                mux_param_load_iptv(mux_uuid_sel, net_uuid_sel)
+            if sel_mux_scanstate >= 0:
+                mux_scanstate = mux_scanstate_key[sel_mux_scanstate]
+                param_update = '"scan_state":' + str(mux_scanstate)
+        if sel_param == 9:
+            confirm_del = dialog.yesno('Confirm mux delete', 'Are you sure want to delete the ' + mux_name + ' mux?')
+            if not confirm_del:
+                mux_param_load_iptv(mux_uuid_sel, net_uuid_sel)
+            delete_mux_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/delete?uuid=["' + mux_uuid_sel +'"]'
+            delete_mux = requests.get(delete_mux_url)
+            muxes_load(net_uuid_sel)
+        if param_update != "":
+            param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/save?node={' + param_update + ',"uuid":"' + mux_uuid_sel + '"}'
+            param_save = requests.get(param_url)
+            mux_param_load_iptv(mux_uuid_sel, net_uuid_sel)
 
 def mux_new():
     new_mux_net_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/load?class=mpegts_network'
@@ -761,25 +903,40 @@ def mux_new():
                 mux_create_url = 'http://' + tvh_url + ':' + tvh_port + '/api/mpegts/network/mux_create?conf={"enabled":1,"epg":1,"delsys":"ATSC-T","frequency":' + str(sel_freq) + ',"modulation":"AUTO","scan_state":0,"charset":"","tsid_zero":false,"pmt_06_ac3":0,"eit_tsid_nocheck":false,"sid_filter":0}&uuid=' + str(new_mux_net_uuid_sel)
                 new_mux_create = requests.get(mux_create_url).json()
                 mux_uuid_sel = new_mux_create['uuid']
-                mux_param_load_atsct(mux_uuid_sel)
+                mux_param_load_atsct(mux_uuid_sel, new_mux_net_uuid_sel)
             if new_mux_net_class_sel == "dvb_network_atsc_c":
                 mux_create_url = 'http://' + tvh_url + ':' + tvh_port + '/api/mpegts/network/mux_create?conf={"enabled":1,"epg":1,"delsys":"ATSC-C","frequency":' + str(sel_freq) + ',"symbolrate":0,"constellation":"AUTO","fec":"AUTO","scan_state":0,"charset":"","tsid_zero":false,"pmt_06_ac3":0,"eit_tsid_nocheck":false,"sid_filter":0}&uuid=' + str(new_mux_net_uuid_sel)
                 new_mux_create = requests.get(mux_create_url).json()
                 mux_uuid_sel = new_mux_create['uuid']
-                mux_param_load_atscc(mux_uuid_sel)
+                mux_param_load_atscc(mux_uuid_sel,new_mux_net_uuid_sel)
             if new_mux_net_class_sel == "dvb_network_dvbc":
                 mux_create_url = 'http://' + tvh_url + ':' + tvh_port + '/api/mpegts/network/mux_create?conf={"enabled":1,"epg":1,"delsys":"DVB-C","frequency":' + str(sel_freq) + ',"symbolrate":0,"constellation":"AUTO","fec":"AUTO","scan_state":0,"charset":"","tsid_zero":false,"pmt_06_ac3":0,"eit_tsid_nocheck":false,"sid_filter":0}&uuid=' + str(new_mux_net_uuid_sel)
                 new_mux_create = requests.get(mux_create_url).json()
                 mux_uuid_sel = new_mux_create['uuid']
-                mux_param_load_atscc(mux_uuid_sel)
+                mux_param_load_atscc(mux_uuid_sel,new_mux_net_uuid_sel)
             if new_mux_net_class_sel == "dvb_network_dvbt":
                 mux_create_url = 'http://' + tvh_url + ':' + tvh_port + '/api/mpegts/network/mux_create?conf={"enabled":1,"epg":1,"delsys":"DVBT","frequency":' + str(sel_freq) + ',"bandwidth":"AUTO","constellation":"AUTO","transmission_mode":"AUTO","guard_interval":"AUTO","hierarchy":"AUTO","fec_hi":"AUTO","fec_lo":"AUTO","plp_id":-1,"scan_state":0,"charset":"","tsid_zero":false,"pmt_06_ac3":0,"eit_tsid_nocheck":false,"sid_filter":0}&uuid=' + str(new_mux_net_uuid_sel)
                 new_mux_create = requests.get(mux_create_url).json()
                 mux_uuid_sel = new_mux_create['uuid']
-                mux_param_load_dvbt(mux_uuid_sel)
+                mux_param_load_dvbt(mux_uuid_sel, new_mux_net_uuid_sel)
             if new_mux_net_class_sel == "dvb_network_dvbs":
                 dialog.ok("Not available yet!", "DVB-S configuration is not yet available in this program.")
             muxes()
+
+def mux_new_iptv(net_uuid_sel):
+    new_mux_url = 'http://' + tvh_url + ':' + tvh_port + '/api/mpegts/network/mux_class?uuid=' + net_uuid_sel
+    new_mux_load = requests.get(new_mux_url).json()
+    sel_url = dialog.input('Enter the URL of the new mux', defaultt="http://",type=xbmcgui.INPUT_ALPHANUM)
+    if sel_url == "":
+        return
+    sel_atsc = dialog.yesno('ATSC based mux', "Is this IPTV mux ATSC?")
+    sel_name = dialog.input('Enter the name of the new mux', defaultt="",type=xbmcgui.INPUT_ALPHANUM)
+    sel_chnum = dialog.input('Enter the channel number of the new mux', defaultt="",type=xbmcgui.INPUT_NUMERIC)
+    sel_service = dialog.input('Enter the service name of the new mux', defaultt=str(sel_name),type=xbmcgui.INPUT_ALPHANUM)
+    mux_create_url = 'http://' + tvh_url + ':' + tvh_port + '/api/mpegts/network/mux_create?conf={"enabled":1,"epg":1,"iptv_url":"' + sel_url + '","iptv_atsc":' + str(sel_atsc) + ',"iptv_muxname":"' + str(sel_name) + '","channel_number":"' + str(sel_chnum) + '","iptv_sname":"' + str(sel_service) + '","scan_state":0,"charset":"","priority":0,"spriority":0,"iptv_substitute":false,"iptv_interface":"","iptv_epgid":"","iptv_icon":"","iptv_tags":"","iptv_satip_dvbt_freq":0,"iptv_buffer_limit":0,"tsid_zero":false,"pmt_06_ac3":0,"eit_tsid_nocheck":false,"sid_filter":0,"iptv_respawn":false,"iptv_kill":0,"iptv_kill_timeout":5,"iptv_env":"","iptv_hdr":""}&uuid=' + str(net_uuid_sel)
+    new_mux_create = requests.get(mux_create_url).json()
+    mux_uuid_sel = new_mux_create['uuid']
+    mux_param_load_iptv(mux_uuid_sel, net_uuid_sel)
 
 def ch_param_load(ch_uuid_sel):
     ch_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/load?uuid=' + ch_uuid_sel
@@ -1081,10 +1238,13 @@ def adapt_param_edit(adapter_uuid_sel, adapt_info_list, adapt_enabled, adapt_nam
             adapt_param_load(adapter_uuid_sel)
 
 def network_new():
-    net_type_name = ["ATSC-T","ATSC-C","DVB-S","DVB-C","DVB-T","ISDB-S","ISDB-C","ISDB-T","IPTV Automatic"]
-    net_type_class = ["dvb_network_atsc_t","dvb_network_atsc_c","dvb_network_dvbs","dvb_network_dvbc","dvb_network_dvbt","dvb_network_isdb_s","dvb_network_isdb_c","dvb_network_isdb_t","iptv_auto_network"]
+    net_type_name = ["ATSC-T","ATSC-C","DVB-S","DVB-C","DVB-T","IPTV Automatic","IPTV Network","ISDB-S","ISDB-C","ISDB-T"]
+    net_type_class = ["dvb_network_atsc_t","dvb_network_atsc_c","dvb_network_dvbs","dvb_network_dvbc","dvb_network_dvbt","iptv_auto_network","iptv_network","dvb_network_isdb_s","dvb_network_isdb_c","dvb_network_isdb_t"]
     sel_net_type = dialog.select('Select a network type to create', list=net_type_name)
-    if sel_net_type >= 0:
+    if sel_net_type < 0:
+        net_uuid_sel = ""
+        return net_uuid_sel
+    if sel_net_type >= 0 and sel_net_type <= 4:
         net_type = net_type_name[sel_net_type]
         net_class = net_type_class[sel_net_type]
         new_net_name = dialog.input('Name of the network', defaultt=net_type,type=xbmcgui.INPUT_ALPHANUM)
@@ -1104,29 +1264,60 @@ def network_new():
         net_create = requests.get(net_create_url).json()
         net_uuid_sel = net_create['uuid']
         return net_uuid_sel
+    if sel_net_type == 5 or sel_net_type == 6:
+        net_type = net_type_name[sel_net_type]
+        net_class = net_type_class[sel_net_type]
+        new_net_name = dialog.input('Name of the network', defaultt=net_type,type=xbmcgui.INPUT_ALPHANUM)
+        if new_net_name == "":
+            new_net_name = net_type
+        new_net_url = dialog.input('URL of the network', defaultt="http://",type=xbmcgui.INPUT_ALPHANUM)
+        new_net_channel_number = dialog.input('Start Channel Numbers From', defaultt="",type=xbmcgui.INPUT_NUMERIC)
+        net_create_url = 'http://' + tvh_url + ':' + tvh_port + '/api/mpegts/network/create?class=' + net_class + '&conf={"networkname":"' + new_net_name + '","bouquet":false,"url":"' + new_net_url + '","channel_number":"' + str(new_net_channel_number) + '"}'
+        net_create = requests.get(net_create_url).json()
+        net_uuid_sel = net_create['uuid']
+        return net_uuid_sel
+    if sel_net_type >= 7:
+        dialog.ok("Network Not Supported!", "ISDB Networks are currently not supported in this addon.", "Please use the Tvheadend web interface to configure ISDB Networks.")
+        net_uuid_sel = ""
+        return net_uuid_sel
 
 def net_param_load(net_uuid_sel):
     net_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/load?uuid=' + str(net_uuid_sel)
     net_load = requests.get(net_url).json()
     net_name = find_param(net_load, 'networkname')
     net_bouquet = find_param(net_load, 'bouquet')
-    net_type = net_load['entries'][0]['class']
-    net_type = re.sub("dvb_network_","",net_type)
+    net_class = net_load['entries'][0]['class']
+    net_type = re.sub("dvb_network_","",net_class)
     net_num_mux = find_param(net_load, 'num_mux')
     net_num_svc = find_param(net_load, 'num_svc')
     net_num_ch = find_param(net_load, 'num_chn')
+    netiptv_max_streams = find_param(net_load, 'max_streams')
+    netiptv_max_bandwidth = find_param(net_load, 'max_bandwidth')
+    netiptv_url = find_param(net_load, 'url')
+    netiptv_channel_number = find_param(net_load, 'channel_number')
+    netiptv_tsid_zero = find_param(net_load, 'tsid_zero')
     if net_num_svc == 0 and net_num_mux == 0:
         net_num_svc_disp = "0 - add muxes before scanning for services"
-    if net_num_mux != 0 and net_num_svc == 0:
+    elif net_num_mux != 0 and net_num_svc == 0:
         net_num_svc_disp = "0 - select to scan muxes for services"
     else:
         net_num_svc_disp = net_num_svc
     if net_num_mux == 0:
-        net_num_mux_disp = "0 - select from list of pre-defined muxes"
+        if net_class != "iptv_auto_network" and net_class != "iptv_network":
+            net_num_mux_disp = "0 - select from list of pre-defined muxes"
+        if net_class == "iptv_auto_network" or net_class == "iptv_network":
+            net_num_mux_disp = "0 - select to add muxes"
     else:
         net_num_mux_disp = net_num_mux
-    net_info_list = ["Name: " + net_name, "Create bouquet: " + str(net_bouquet), "Number of muxes: " + str(net_num_mux_disp), "Number of services: " + str(net_num_svc_disp), "Number of channels: " + str(net_num_ch), "DELETE THE NETWORK"]
-    net_param_edit(net_uuid_sel, net_info_list, net_name, net_bouquet, net_type, net_num_mux, net_num_svc, net_num_ch)
+    if net_class == "iptv_auto_network":
+        net_info_list = ["Name: " + net_name, "Create bouquet: " + str(net_bouquet), "URL: " + netiptv_url, "Max number of input streams: " + str(netiptv_max_streams), "Max bandwidth (Kbps): " + str(netiptv_max_bandwidth), "Channel numbers from: " + str(netiptv_channel_number), "Accept zero value for TSID: " + str(netiptv_tsid_zero), "Number of muxes: " + str(net_num_mux_disp), "Number of services: " + str(net_num_svc_disp), "Number of channels: " + str(net_num_ch), "DELETE THE NETWORK"]
+        netiptvauto_param_edit(net_uuid_sel, net_info_list, net_name, net_bouquet, net_type, net_num_mux, net_num_svc, net_num_ch, netiptv_url, netiptv_max_streams, netiptv_max_bandwidth, netiptv_channel_number, netiptv_tsid_zero)
+    elif net_class == "iptv_network":
+        net_info_list = ["Name: " + net_name, "Create bouquet: " + str(net_bouquet), "Max number of input streams: " + str(netiptv_max_streams), "Max bandwidth (Kbps): " + str(netiptv_max_bandwidth), "Number of muxes: " + str(net_num_mux_disp), "Number of services: " + str(net_num_svc_disp), "Number of channels: " + str(net_num_ch), "DELETE THE NETWORK"]
+        netiptv_param_edit(net_uuid_sel, net_info_list, net_name, net_bouquet, net_type, net_num_mux, net_num_svc, net_num_ch, netiptv_max_streams, netiptv_max_bandwidth)
+    else:
+        net_info_list = ["Name: " + net_name, "Create bouquet: " + str(net_bouquet), "Number of muxes: " + str(net_num_mux_disp), "Number of services: " + str(net_num_svc_disp), "Number of channels: " + str(net_num_ch), "DELETE THE NETWORK"]
+        net_param_edit(net_uuid_sel, net_info_list, net_name, net_bouquet, net_type, net_num_mux, net_num_svc, net_num_ch)
 
 def net_param_edit(net_uuid_sel, net_info_list, net_name, net_bouquet, net_type, net_num_mux, net_num_svc, net_num_ch):
     sel_param = dialog.select('Network Configuration - Select parameter to edit', list=net_info_list)
@@ -1145,7 +1336,7 @@ def net_param_edit(net_uuid_sel, net_info_list, net_name, net_bouquet, net_type,
                 net_bouquet_enabled = truefalse[sel_net_bouquet]
                 param_update = '"bouquet":' + net_bouquet_enabled
         if sel_param == 2 and net_num_mux != 0:
-            muxes()
+            muxes_load(net_uuid_sel)
         if sel_param == 2 and net_num_mux == 0:
             dvb_list_url = 'http://' + tvh_url + ':' + tvh_port + '/api/dvb/scanfile/list?type=' + net_type
             dvb_list = requests.get(dvb_list_url).json()
@@ -1162,7 +1353,7 @@ def net_param_edit(net_uuid_sel, net_info_list, net_name, net_bouquet, net_type,
             if dialog.yesno(str(net_num_svc) + " services found!", "Would you like to scan muxes for new services?"):
                 start_scan(net_uuid_sel)
         if sel_param == 3 and net_num_mux == 0:
-            dialog.ok("No muxes found!", "Add muxes before scanning for services.")
+            dialog.ok("No services found!", "Add muxes before scanning for services.")
         if sel_param == 3 and net_num_mux != 0 and net_num_svc == 0:
             if dialog.yesno("No services found!", "Would you like to scan muxes for new services?"):
                 start_scan(net_uuid_sel)
@@ -1177,6 +1368,143 @@ def net_param_edit(net_uuid_sel, net_info_list, net_name, net_bouquet, net_type,
         if sel_param == 4 and net_num_mux == 0:
             dialog.ok("No muxes found!", "Add muxes before scanning for services and mapping channels.")
         if sel_param == 5:
+            confirm_del = dialog.yesno('Confirm delete network', 'Are you sure want to delete the ' + net_name + ' network?')
+            if not confirm_del:
+                return
+            delete_net_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/delete?uuid=["' + net_uuid_sel +'"]'
+            delete_net = requests.get(delete_net_url)
+            networks()
+        if param_update != "":
+            param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/save?node={' + param_update + ',"uuid":"' + net_uuid_sel + '"}'
+            param_save = requests.get(param_url)
+            net_param_load(net_uuid_sel)
+
+def netiptvauto_param_edit(net_uuid_sel, net_info_list, net_name, net_bouquet, net_type, net_num_mux, net_num_svc, net_num_ch, netiptv_url, netiptv_max_streams, netiptv_max_bandwidth, netiptv_channel_number, netiptv_tsid_zero):
+    sel_param = dialog.select('Network Configuration - Select parameter to edit', list=net_info_list)
+    if sel_param < 0:
+        networks()
+    if sel_param >= 0:
+        param_update = ""
+        if sel_param == 0:
+            sel_net_name = dialog.input('Edit the network name', defaultt=net_name,type=xbmcgui.INPUT_ALPHANUM)
+            if sel_net_name == "":
+                sel_net_name = net_name
+            param_update = '"networkname":"' + sel_net_name + '"'
+        if sel_param == 1:
+            sel_net_bouquet = dialog.select('Enable or disable to automatically create a bouquet from all services', list=enabledisable)
+            if sel_net_bouquet >= 0:
+                net_bouquet_enabled = truefalse[sel_net_bouquet]
+                param_update = '"bouquet":' + net_bouquet_enabled
+        if sel_param == 2:
+            sel_netiptv_url = dialog.input('Edit the network URL', defaultt=netiptv_url,type=xbmcgui.INPUT_ALPHANUM)
+            if sel_netiptv_url == "":
+                sel_netiptv_url = netiptv_url
+            param_update = '"url":"' + sel_netiptv_url + '"'
+        if sel_param == 3:
+            sel_netiptv_max_streams = dialog.input('Set the max number of input streams for the network', defaultt=str(netiptv_max_streams),type=xbmcgui.INPUT_NUMERIC)
+            if sel_netiptv_max_streams == "":
+                sel_netiptv_max_streams = netiptv_max_streams
+            param_update = '"max_streams":"' + str(sel_netiptv_max_streams) + '"'
+        if sel_param == 4:
+            sel_netiptv_max_bandwidth = dialog.input('Set the max bandwidth for the network', defaultt=str(netiptv_max_bandwidth),type=xbmcgui.INPUT_NUMERIC)
+            if sel_netiptv_max_bandwidth == "":
+                sel_netiptv_max_bandwidth = netiptv_max_bandwidth
+            param_update = '"max_bandwidth":"' + str(sel_netiptv_max_bandwidth) + '"'
+        if sel_param == 5:
+            sel_netiptv_channel_number = dialog.input('Set the lowest (starting) channel number', defaultt=str(netiptv_channel_number),type=xbmcgui.INPUT_NUMERIC)
+            if sel_netiptv_channel_number == "":
+                sel_netiptv_channel_number = netiptv_channel_number
+            param_update = '"channel_number":"' + str(sel_netiptv_channel_number) + '"'
+        if sel_param == 6:
+            sel_netiptv_tsid_zero = dialog.select('Enable or disable to accept a zero value for TSID', list=enabledisable)
+            if sel_netiptv_tsid_zero >= 0:
+                netiptv_tsid_zero_enabled = truefalse[sel_netiptv_tsid_zero]
+                param_update = '"tsid_zero":' + netiptv_tsid_zero_enabled
+        if sel_param == 7 and net_num_mux != 0:
+            muxes_load(net_uuid_sel)
+        if sel_param == 7 and net_num_mux == 0:
+            if dialog.yesno("No muxes found!", "Would you like to edit muxes?"):
+                mux_new_iptv(net_uuid_sel)
+        if sel_param == 8 and net_num_mux != 0 and net_num_svc != 0:
+            if dialog.yesno(str(net_num_svc) + " services found!", "Would you like to scan muxes for new services?"):
+                start_scan(net_uuid_sel)
+        if sel_param == 8 and net_num_mux == 0:
+            dialog.ok("No muxes found!", "Add muxes before scanning for services.")
+        if sel_param == 8 and net_num_mux != 0 and net_num_svc == 0:
+            if dialog.yesno("No services found!", "Would you like to scan muxes for new services?"):
+                start_scan(net_uuid_sel)
+        if sel_param == 9 and net_num_svc != 0 and net_num_ch == 0:
+            if dialog.yesno(str(net_num_svc) + " services found!", "Would you like to map services to channels?"):
+                services()
+        if sel_param == 9 and net_num_svc != 0 and net_num_ch != 0:
+            channels()
+        if sel_param == 9 and net_num_svc == 0 and net_num_mux != 0:
+            if dialog.yesno("No services found!", "Would you like to scan muxes for new services?"):
+                start_scan(net_uuid_sel)
+        if sel_param == 9 and net_num_mux == 0:
+            dialog.ok("No muxes found!", "Add muxes before scanning for services and mapping channels.")
+        if sel_param == 10:
+            confirm_del = dialog.yesno('Confirm delete network', 'Are you sure want to delete the ' + net_name + ' network?')
+            if not confirm_del:
+                return
+            delete_net_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/delete?uuid=["' + net_uuid_sel +'"]'
+            delete_net = requests.get(delete_net_url)
+            networks()
+        if param_update != "":
+            param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/save?node={' + param_update + ',"uuid":"' + net_uuid_sel + '"}'
+            param_save = requests.get(param_url)
+            net_param_load(net_uuid_sel)
+
+def netiptv_param_edit(net_uuid_sel, net_info_list, net_name, net_bouquet, net_type, net_num_mux, net_num_svc, net_num_ch, netiptv_max_streams, netiptv_max_bandwidth):
+    sel_param = dialog.select('Network Configuration - Select parameter to edit', list=net_info_list)
+    if sel_param < 0:
+        networks()
+    if sel_param >= 0:
+        param_update = ""
+        if sel_param == 0:
+            sel_net_name = dialog.input('Edit the network name', defaultt=net_name,type=xbmcgui.INPUT_ALPHANUM)
+            if sel_net_name == "":
+                sel_net_name = net_name
+            param_update = '"networkname":"' + sel_net_name + '"'
+        if sel_param == 1:
+            sel_net_bouquet = dialog.select('Enable or disable to automatically create a bouquet from all services', list=enabledisable)
+            if sel_net_bouquet >= 0:
+                net_bouquet_enabled = truefalse[sel_net_bouquet]
+                param_update = '"bouquet":' + net_bouquet_enabled
+        if sel_param == 2:
+            sel_netiptv_max_streams = dialog.input('Set the max number of input streams for the network', defaultt=str(netiptv_max_streams),type=xbmcgui.INPUT_NUMERIC)
+            if sel_netiptv_max_streams == "":
+                sel_netiptv_max_streams = netiptv_max_streams
+            param_update = '"max_streams":"' + str(sel_netiptv_max_streams) + '"'
+        if sel_param == 3:
+            sel_netiptv_max_bandwidth = dialog.input('Set the max bandwidth for the network', defaultt=str(netiptv_max_bandwidth),type=xbmcgui.INPUT_NUMERIC)
+            if sel_netiptv_max_bandwidth == "":
+                sel_netiptv_max_bandwidth = netiptv_max_bandwidth
+            param_update = '"max_bandwidth":"' + str(sel_netiptv_max_bandwidth) + '"'
+        if sel_param == 4 and net_num_mux != 0:
+            muxes_load(net_uuid_sel)
+        if sel_param == 4 and net_num_mux == 0:
+            if dialog.yesno("No muxes found!", "Would you like to create a new mux?"):
+                mux_new_iptv(net_uuid_sel)
+        if sel_param == 5 and net_num_mux != 0 and net_num_svc != 0:
+            if dialog.yesno(str(net_num_svc) + " services found!", "Would you like to scan muxes for new services?"):
+                start_scan(net_uuid_sel)
+        if sel_param == 5 and net_num_mux == 0:
+            dialog.ok("No muxes found!", "Add muxes before scanning for services.")
+        if sel_param == 5 and net_num_mux != 0 and net_num_svc == 0:
+            if dialog.yesno("No services found!", "Would you like to scan muxes for new services?"):
+                start_scan(net_uuid_sel)
+        if sel_param == 6 and net_num_svc != 0 and net_num_ch == 0:
+            if dialog.yesno(str(net_num_svc) + " services found!", "Would you like to map services to channels?"):
+                services()
+        if sel_param == 6 and net_num_svc != 0 and net_num_ch != 0:
+            channels()
+        if sel_param == 6 and net_num_svc == 0 and net_num_mux != 0:
+            if dialog.yesno("No services found!", "Would you like to scan muxes for new services?"):
+                start_scan(net_uuid_sel)
+        if sel_param == 6 and net_num_mux == 0:
+            dialog.ok("No muxes found!", "Add muxes before scanning for services and mapping channels.")
+        if sel_param == 7:
             confirm_del = dialog.yesno('Confirm delete network', 'Are you sure want to delete the ' + net_name + ' network?')
             if not confirm_del:
                 return
@@ -1432,59 +1760,30 @@ def networks():
         return
     if sel_network == 0:
         net_uuid_sel = network_new()
-        net_param_load(net_uuid_sel)
-    if sel_network >= 0:
+        if net_uuid_sel == "":
+            return
+        else:
+            net_param_load(net_uuid_sel)
+    if sel_network > 0:
         net_uuid_sel = net_uuid[sel_network]
         net_param_load(net_uuid_sel)
 
 @plugin.route('/muxes')
 def muxes():
-    muxes_url = 'http://' + tvh_url + ':' + tvh_port + '/api/mpegts/mux/grid?limit=999999999'
-    muxes = requests.get(muxes_url).json()
-    muxes_name = []
-    muxes_uuid = []
-    muxes_enabled = []
-    muxes_network = []
-    muxes_frequency = []
-    for mux_n in muxes['entries']:
-        muxes_name.append(mux_n['name'])
-    for mux_u in muxes['entries']:
-        muxes_uuid.append(mux_u['uuid'])
-    for mux_w in muxes['entries']:
-        muxes_network.append(" in " + mux_w['network'])
-    for mux_f in muxes['entries']:
-        muxes_frequency.append(mux_f['frequency'])
-    muxes_full = zip(muxes_name, muxes_network,)
-    muxes_list = ["%s %s" % x for x in muxes_full]
-    muxes_frequency, muxes_list, muxes_uuid = zip(*sorted(zip(muxes_frequency, muxes_list, muxes_uuid)))
-    create_mux = "CREATE NEW MUX"
-    muxes_list = list(muxes_list)
-    muxes_list.insert(0,create_mux)
-    muxes_list = tuple(muxes_list)
-    muxes_frequency = list(muxes_frequency)
-    muxes_frequency.insert(0,create_mux)
-    muxes_frequency = tuple(muxes_frequency)
-    muxes_uuid = list(muxes_uuid)
-    muxes_uuid.insert(0,create_mux)
-    muxes_uuid = tuple(muxes_uuid)
-    sel_mux = dialog.select('Select a mux to configure', list=muxes_list)
-    if sel_mux == 0:
-        mux_new()
-    if sel_mux >= 0:
-        mux_uuid_sel = muxes_uuid[sel_mux]
-        sel_mux_class_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/load?uuid=' + mux_uuid_sel
-        sel_mux_class_load = requests.get(sel_mux_class_url).json()
-        sel_mux_class = sel_mux_class_load['entries'][0]['class']
-        if sel_mux_class == "dvb_mux_atsc_t":
-            mux_param_load_atsct(mux_uuid_sel)
-        if sel_mux_class == "dvb_mux_atsc_c":
-            mux_param_load_atscc(mux_uuid_sel)
-        if sel_mux_class == "dvb_mux_dvbc":
-            mux_param_load_atscc(mux_uuid_sel)
-        if sel_mux_class == "dvb_mux_dvbt":
-            mux_param_load_dvbt(mux_uuid_sel)
-        if sel_mux_class == "dvb_mux_dvbs":
-            mux_param_load_dvbs(mux_uuid_sel)
+    networks_url = 'http://' + tvh_url + ':' + tvh_port + '/api/mpegts/network/grid'
+    networks = requests.get(networks_url).json()
+    net_name = []
+    net_uuid = []
+    for net_n in networks['entries']:
+        net_name.append(net_n['networkname'])
+    for net_u in networks['entries']:
+        net_uuid.append(net_u['uuid'])
+    sel_network = dialog.select('Select a network to see list of muxes', list=net_name)
+    if sel_network < 0:
+        return
+    if sel_network >= 0:
+        net_uuid_sel = net_uuid[sel_network]
+        muxes_load(net_uuid_sel)
 
 @plugin.route('/mux_scan')
 def mux_scan():

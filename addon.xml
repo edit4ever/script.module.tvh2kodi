@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addon id="script.module.tvh2kodi"
        name="Tvheadend Setup for Kodi"
-       version="1.7"
+       version="1.8"
        provider-name="edit4ever">
   <requires>
     <import addon="xbmc.python" version="2.6.0"/>
@@ -17,6 +17,8 @@
     <description>Tvh2Kodi gives access to the basic Tvheadend settings directly from the Kodi interface. This can be used in place of the Tvheadend web interface to get your Tvheadend backend server configured and running.  It is also provides an easy way to scan for new services and channels and to configure your channel EPG sources.
 
 * minimum version of Tvheadend is 4.2
+v1.8
+- add support for IPTV Networks
 v1.7
 - add support for Tvh username-password
 v1.6
