@@ -13,6 +13,8 @@ import time
 import ast
 import zipfile
 import datetime
+#from requests.exceptions import HTTPError
+#from requests.exceptions import ConnectionError
 
 plugin = Plugin()
 dialog = xbmcgui.Dialog()
@@ -37,8 +39,24 @@ try:
 except:
     pass
 
-tvh_url = xbmcaddon.Addon().getSetting('tvhurl')
 tvh_port = xbmcaddon.Addon().getSetting('tvhport')
+tvh_usern = xbmcaddon.Addon().getSetting('usern')
+tvh_passw = xbmcaddon.Addon().getSetting('passw')
+if tvh_usern != "" and tvh_passw != "":
+    tvh_url = tvh_usern + ":" + tvh_passw + "@" + xbmcaddon.Addon().getSetting('tvhurl')
+else:
+    tvh_url = xbmcaddon.Addon().getSetting('tvhurl')
+
+try:
+    check_url = 'http://' + tvh_url + ':' + tvh_port + '/api/status/connections'
+    check_load = requests.get(check_url)
+    check_status = check_load.raise_for_status()
+except requests.exceptions.HTTPError as err:
+        dialog.ok("Tvheadend Access Error!", str(err), "", "Please check your username/password in settings.")
+except requests.exceptions.RequestException as e:
+    dialog.ok("Tvheadend Access Error!", "Could not connect to Tvheadend server.", "Please check your Tvheadend server is running or check the IP and port configuration in the settings.")
+
+
 truefalse = ['true', 'false']
 enabledisable = ['Enabled', 'Disabled']
 

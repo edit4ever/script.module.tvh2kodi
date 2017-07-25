@@ -3,6 +3,9 @@
   <category label="32000">
     <setting label="32010"  type="ipaddress"  id="tvhurl"  default="127.0.0.1"/>
     <setting label="32020"  type="number"  id="tvhport"  default="9981"/>
+    <setting label="32022"  type="text" id="usern" default=""/>
+    <setting label="32023"  type="text" id="passw"  default=""/>
+    <setting label="" type="lsep" />
     <setting label="32030"  type="folder"  id="dvrstorage"  default="" option="writeable"/>
   </category>
 </settings>
