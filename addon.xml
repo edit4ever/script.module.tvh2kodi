@@ -19,6 +19,7 @@
 * minimum version of Tvheadend is 4.2
 v1.8
 - add support for IPTV Networks
+- fix error in muxes when 0 muxes available
 v1.7
 - add support for Tvh username-password
 v1.6

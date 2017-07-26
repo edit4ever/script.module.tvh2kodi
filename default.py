@@ -356,31 +356,35 @@ def muxes_load(net_uuid_sel):
     muxes_enabled = []
     muxes_network = []
     muxes_frequency = []
-    for mux_n in muxes['entries']:
-        muxes_name.append(mux_n['name'])
-    for mux_u in muxes['entries']:
-        muxes_uuid.append(mux_u['uuid'])
-    for mux_w in muxes['entries']:
-        muxes_network.append(" in " + mux_w['network'])
-    try:
-        for mux_f in muxes['entries']:
-            muxes_frequency.append(mux_f['frequency'])
-    except:
-        for mux_f in muxes['entries']:
-            muxes_frequency.append(mux_f['channel_number'])
-    muxes_full = zip(muxes_name, muxes_network,)
-    muxes_list = ["%s %s" % x for x in muxes_full]
-    muxes_frequency, muxes_list, muxes_uuid = zip(*sorted(zip(muxes_frequency, muxes_list, muxes_uuid)))
-    create_mux = "CREATE NEW MUX"
-    muxes_list = list(muxes_list)
-    muxes_list.insert(0,create_mux)
-    muxes_list = tuple(muxes_list)
-    muxes_frequency = list(muxes_frequency)
-    muxes_frequency.insert(0,create_mux)
-    muxes_frequency = tuple(muxes_frequency)
-    muxes_uuid = list(muxes_uuid)
-    muxes_uuid.insert(0,create_mux)
-    muxes_uuid = tuple(muxes_uuid)
+    muxes_total = muxes['total']
+    if muxes_total > 0:
+        for mux_n in muxes['entries']:
+            muxes_name.append(mux_n['name'])
+        for mux_u in muxes['entries']:
+            muxes_uuid.append(mux_u['uuid'])
+        for mux_w in muxes['entries']:
+            muxes_network.append(" in " + mux_w['network'])
+        try:
+            for mux_f in muxes['entries']:
+                muxes_frequency.append(mux_f['frequency'])
+        except:
+            for mux_f in muxes['entries']:
+                muxes_frequency.append(mux_f['channel_number'])
+        muxes_full = zip(muxes_name, muxes_network,)
+        muxes_list = ["%s %s" % x for x in muxes_full]
+        muxes_frequency, muxes_list, muxes_uuid = zip(*sorted(zip(muxes_frequency, muxes_list, muxes_uuid)))
+        create_mux = "CREATE NEW MUX"
+        muxes_list = list(muxes_list)
+        muxes_list.insert(0,create_mux)
+        muxes_list = tuple(muxes_list)
+        muxes_frequency = list(muxes_frequency)
+        muxes_frequency.insert(0,create_mux)
+        muxes_frequency = tuple(muxes_frequency)
+        muxes_uuid = list(muxes_uuid)
+        muxes_uuid.insert(0,create_mux)
+        muxes_uuid = tuple(muxes_uuid)
+    else:
+        muxes_list = ['CREATE NEW MUX']
     sel_mux = dialog.select('Select a mux to configure', list=muxes_list)
     if sel_mux == 0:
         if net_class == "iptv_network" or net_class == "iptv_auto_network":
@@ -1264,7 +1268,7 @@ def network_new():
         net_create = requests.get(net_create_url).json()
         net_uuid_sel = net_create['uuid']
         return net_uuid_sel
-    if sel_net_type == 5 or sel_net_type == 6:
+    if sel_net_type == 5:
         net_type = net_type_name[sel_net_type]
         net_class = net_type_class[sel_net_type]
         new_net_name = dialog.input('Name of the network', defaultt=net_type,type=xbmcgui.INPUT_ALPHANUM)
@@ -1273,6 +1277,16 @@ def network_new():
         new_net_url = dialog.input('URL of the network', defaultt="http://",type=xbmcgui.INPUT_ALPHANUM)
         new_net_channel_number = dialog.input('Start Channel Numbers From', defaultt="",type=xbmcgui.INPUT_NUMERIC)
         net_create_url = 'http://' + tvh_url + ':' + tvh_port + '/api/mpegts/network/create?class=' + net_class + '&conf={"networkname":"' + new_net_name + '","bouquet":false,"url":"' + new_net_url + '","channel_number":"' + str(new_net_channel_number) + '"}'
+        net_create = requests.get(net_create_url).json()
+        net_uuid_sel = net_create['uuid']
+        return net_uuid_sel
+    if sel_net_type == 6:
+        net_type = net_type_name[sel_net_type]
+        net_class = net_type_class[sel_net_type]
+        new_net_name = dialog.input('Name of the network', defaultt=net_type,type=xbmcgui.INPUT_ALPHANUM)
+        if new_net_name == "":
+            new_net_name = net_type
+        net_create_url = 'http://' + tvh_url + ':' + tvh_port + '/api/mpegts/network/create?class=' + net_class + '&conf={"networkname":"' + new_net_name + '","bouquet":false}'
         net_create = requests.get(net_create_url).json()
         net_uuid_sel = net_create['uuid']
         return net_uuid_sel
@@ -1941,7 +1955,7 @@ def epg():
 
 @plugin.route('/wizard')
 def wizard():
-    start = dialog.yesno("TVheadend Wizard - Start", "This wizard will walk you through the initial setup for TVheadend. Running this wizard on an already configured system could cause issues.", "Do you wish to continue?")
+    start = dialog.yesno("TVheadend Wizard - Start", "This wizard will walk you through the initial setup for TVheadend using usb tuners. Running this wizard on an already configured system could cause issues.", "Do you wish to continue?")
     if not start:
         return
     else:
