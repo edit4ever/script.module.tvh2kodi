@@ -42,11 +42,10 @@ except:
 tvh_port = xbmcaddon.Addon().getSetting('tvhport')
 tvh_usern = xbmcaddon.Addon().getSetting('usern')
 tvh_passw = xbmcaddon.Addon().getSetting('passw')
-tvh_url_base = xbmcaddon.Addon().getSetting('tvhurl')
 if tvh_usern != "" and tvh_passw != "":
-    tvh_url = tvh_usern + ":" + tvh_passw + "@" + tvh_url_base
+    tvh_url = tvh_usern + ":" + tvh_passw + "@" + xbmcaddon.Addon().getSetting('tvhurl')
 else:
-    tvh_url = tvh_url_base
+    tvh_url = xbmcaddon.Addon().getSetting('tvhurl')
 
 try:
     check_url = 'http://' + tvh_url + ':' + tvh_port + '/api/status/connections'
@@ -993,7 +992,7 @@ def ch_param_edit(ch_uuid_sel, ch_info_list, ch_enabled, ch_autoname, ch_name, c
             else:
                 param_update = '"icon":"' + sel_ch_icon + '"'
         if sel_param == 5:
-            epg_grid_url =  'http://' + tvh_url + ':' + tvh_port + '/api/epggrab/channel/grid?sort=names&dir=ASC&all=1'
+            epg_grid_url =  'http://' + tvh_url + ':' + tvh_port + '/api/epggrab/channel/grid?sort=names&dir=ASC&limit=999999999&all=1'
             epg_grid_load = requests.get(epg_grid_url).json()
             epg_list_text = [x['names'] for x in epg_grid_load['entries']]
             epg_list_id = [x['id'] for x in epg_grid_load['entries']]
@@ -1918,39 +1917,39 @@ def epg():
             comet_poll = requests.get(comet_poll_url).json()
             comet_poll_logtxt_list = []
             for t in comet_poll['messages']:
-                comet_poll_logtxt_list.insert(0,t['logtxt'])
+                comet_poll_logtxt_list.insert(0,t.get('logtxt', "..."))
             comet_poll_logtxt = '\n'.join(comet_poll_logtxt_list)
             pDialog.update(10, comet_poll_logtxt)
             time.sleep(1)
             if (pDialog.iscanceled()):
                 pDialog.close()
             comet_update = False
-            comet_poll = requests.get(comet_poll_url).json()
-            if comet_poll['messages'] == []:
-                comet_poll_logtxt = '\n'.join(comet_poll_logtxt_list)
-                pDialog.update(25, comet_poll_logtxt)
-            time.sleep(1)
-            if (pDialog.iscanceled()):
-                pDialog.close()
-            perc_update = 30
+            grabber_success = False
+            perc_update = 10
             while comet_update == False:
                 if (pDialog.iscanceled()):
                     pDialog.close()
+                perc_update = perc_update + int((100 - perc_update) * .1) + 1
+                comet_poll_logtxt_list = []
+                for t in comet_poll['messages']:
+                    comet_poll_logtxt_list.insert(0,t.get('logtxt', "..."))
+                    comet_poll_logtxt = '\n'.join(comet_poll_logtxt_list)
+                if "grab took" in comet_poll_logtxt:
+                    comet_update = True
+                    grabber_success = True
+                if "grab returned no data" in comet_poll_logtxt:
+                    comet_update = True
                 pDialog.update(perc_update, comet_poll_logtxt)
                 comet_poll = requests.get(comet_poll_url).json()
-                perc_update = perc_update + 5
-                if comet_poll['messages'] == []:
-                    comet_update = True
-                    time.sleep(1)
-#            comet_poll = requests.get(comet_poll_url).json()
-            for t in comet_poll['messages']:
-                comet_poll_logtxt_list.insert(0,t['logtxt'])
-            comet_poll_logtxt = '\n'.join(comet_poll_logtxt_list)
+                time.sleep(1)
             pDialog.update(100, comet_poll_logtxt)
             time.sleep(2)
             pDialog.close()
-            if dialog.yesno("Internal EPG grabber finished", "Your EPG has been updated.", "Sometimes Kodi needs a restart in order to update the EPG display.  Or you can clear the data in the PVR & Live TV settings.", "Would you like to open the PVR & Live TV settings?"):
-                xbmc.executebuiltin('ActivateWindow(pvrsettings)')
+            if grabber_success == True:
+                if dialog.yesno("Internal EPG grabber finished", "Your EPG has been updated.", "Sometimes Kodi needs a restart in order to update the EPG display.  Or you can clear the data in the PVR & Live TV settings.", "Would you like to open the PVR & Live TV settings?"):
+                    xbmc.executebuiltin('ActivateWindow(pvrsettings)')
+            else:
+                dialog.ok("Internal EPG Grabber Error!", "The EPG Grabber failed to return data.", "", "Please check your grabber installation for issues.")
     if sel_epg > 2 :
         epg_param(sel_epg, epg_rename, epg_renumber, epg_reicon, epg_dbsave, epg_intcron, epg_otainit, epg_otacron, epg_otatime)
 
@@ -2160,7 +2159,7 @@ def index():
     })
     items.append(
     {
-        'label': 'Tvheadend Backend: ' + tvh_url_base + ':' + tvh_port,
+        'label': 'Tvheadend Backend: ' + tvh_url + ':' + tvh_port,
         'path': plugin.url_for(u'tvhclient'),
         'thumbnail':get_icon_path('server'),
     })
