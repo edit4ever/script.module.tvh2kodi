@@ -42,10 +42,11 @@ except:
 tvh_port = xbmcaddon.Addon().getSetting('tvhport')
 tvh_usern = xbmcaddon.Addon().getSetting('usern')
 tvh_passw = xbmcaddon.Addon().getSetting('passw')
+tvh_url_base = xbmcaddon.Addon().getSetting('tvhurl')
 if tvh_usern != "" and tvh_passw != "":
-    tvh_url = tvh_usern + ":" + tvh_passw + "@" + xbmcaddon.Addon().getSetting('tvhurl')
+    tvh_url = tvh_usern + ":" + tvh_passw + "@" + tvh_url_base
 else:
-    tvh_url = xbmcaddon.Addon().getSetting('tvhurl')
+    tvh_url = tvh_url_base
 
 try:
     check_url = 'http://' + tvh_url + ':' + tvh_port + '/api/status/connections'
@@ -2159,7 +2160,7 @@ def index():
     })
     items.append(
     {
-        'label': 'Tvheadend Backend: ' + tvh_url + ':' + tvh_port,
+        'label': 'Tvheadend Backend: ' + tvh_url_base + ':' + tvh_port,
         'path': plugin.url_for(u'tvhclient'),
         'thumbnail':get_icon_path('server'),
     })
