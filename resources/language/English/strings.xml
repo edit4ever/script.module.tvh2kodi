@@ -8,4 +8,5 @@
 	<string id="32023">Tvheadend Password</string>
 	<string id="32025">Tvheadend Paths</string>
 	<string id="32030">DVR Recording Path</string>
+	<string id="32035">Timeshift Buffer Path</string>
 </strings>

@@ -204,7 +204,7 @@ def dvr_param_load(dvr_uuid_sel):
     dvr_clone = find_param(dvr_load, 'clone')
     dvr_storage = find_param(dvr_load, 'storage')
     xbmcaddon.Addon().setSetting(id='dvrstorage', value=dvr_storage)
-    dvr_info_list = ["Name: " + str(dvr_name), "Enabled: " + str(dvr_enabled), "Storage: " + str(dvr_storage), "Days to Keep Recordings: " + str(dvr_keep), "Duplicate Recording Timer If Error Occurs: " + str(dvr_clone), "Stream Profile: " + str(dvr_profile), "Recording File and Folder options"]
+    dvr_info_list = ["Name: " + str(dvr_name), "Enabled: " + str(dvr_enabled), "Storage: " + str(dvr_storage), "Days to Keep Recordings: " + str(dvr_keep), "Duplicate Recording Timer If Error Occurs: " + str(dvr_clone), "Stream Profile: " + str(dvr_profile), "Recording File and Folder options", "Timeshift Options"]
     dvr_param_edit(dvr_uuid_sel, dvr_info_list, dvr_keep_key, dvr_keep_val, dvr_name, dvr_enabled, dvr_storage, dvr_keep, dvr_clone, dvr_profile_key, dvr_profile_val, dvr_profile)
 
 def dvr_param_edit(dvr_uuid_sel, dvr_info_list, dvr_keep_key, dvr_keep_val, dvr_name, dvr_enabled, dvr_storage, dvr_keep, dvr_clone, dvr_profile_key, dvr_profile_val, dvr_profile):
@@ -251,6 +251,8 @@ def dvr_param_edit(dvr_uuid_sel, dvr_info_list, dvr_keep_key, dvr_keep_val, dvr_
                 param_update = '"profile":' + str(dvr_profile)
         if sel_param == 6:
             dvr_file_param_load(dvr_uuid_sel)
+        if sel_param == 7:
+            time_param_load(dvr_uuid_sel)
         if param_update != "":
             param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/save?node={' + param_update + ',"uuid":"' + dvr_uuid_sel + '"}'
             param_save = requests.get(param_url)
@@ -344,6 +346,94 @@ def dvr_file_param_edit(dvr_uuid_sel, dvr_file_info_list, dvr_day_dir, dvr_chann
             param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/save?node={' + param_update + ',"uuid":"' + dvr_uuid_sel + '"}'
             param_save = requests.get(param_url)
             dvr_file_param_load(dvr_uuid_sel)
+
+def time_param_load(dvr_uuid_sel):
+    time_url = 'http://' + tvh_url + ':' + tvh_port + '/api/timeshift/config/load'
+    time_load = requests.get(time_url).json()
+    time_enabled = find_param(time_load, 'enabled')
+    time_ondemand = find_param(time_load, 'ondemand')
+    time_path = find_param(time_load, 'path')
+    time_max_period = find_param(time_load, 'max_period')
+    time_unlimited_period = find_param(time_load, 'unlimited_period')
+    time_max_size = find_param(time_load, 'max_size')
+    time_ram_size = find_param(time_load, 'ram_size')
+    time_unlimited_size = find_param(time_load, 'unlimited_size')
+    time_ram_only = find_param(time_load, 'ram_only')
+    time_ram_fit = find_param(time_load, 'ram_fit')
+    time_teletext = find_param(time_load, 'teletext')
+    time_info_list = ["Timeshift Enabled: " + str(time_enabled), "Maximum Time (mins): " + str(time_max_period), "Storage Path: " + str(time_path), "Maximum Size (MB): " + str(time_max_size), "Maximum RAM Size (MB): " + str(time_ram_size), "RAM Only: " + str(time_ram_only), "On-demand (no first rewind): " + str(time_ondemand), "Unlimited Time: " + str(time_unlimited_period), "Unlimited Size: " + str(time_unlimited_size), "Fit to RAM (cut rewind): " + str(time_ram_fit), "Include Teletext: " + str(time_teletext)]
+    time_param_edit(dvr_uuid_sel, time_info_list, time_enabled, time_max_period, time_path, time_max_size, time_ram_size, time_ram_only, time_ondemand, time_unlimited_period, time_unlimited_size, time_ram_fit, time_teletext)
+
+def time_param_edit(dvr_uuid_sel, time_info_list, time_enabled, time_max_period, time_path, time_max_size, time_ram_size, time_ram_only, time_ondemand, time_unlimited_period, time_unlimited_size, time_ram_fit, time_teletext):
+    sel_param = dialog.select('Timeshift Options - Select parameter to edit', list=time_info_list)
+    if sel_param < 0:
+        return
+    if sel_param >= 0:
+        param_update = ""
+        if sel_param == 0:
+            sel_enabled = dialog.select('Enable/Disable the timeshift function', list=enabledisable)
+            if sel_enabled >= 0:
+                time_enabled = truefalse[sel_enabled]
+                param_update = '"enabled":' + time_enabled
+        if sel_param == 1:
+            sel_num = dialog.input('Set maximum time for buffering (minutes)', defaultt=str(time_max_period),type=xbmcgui.INPUT_NUMERIC)
+            if sel_num >= 0:
+                time_max_period = sel_num
+                param_update = '"max_period":' + str(time_max_period)
+        if sel_param == 2:
+            if tvh_url == "127.0.0.1":
+                plugin.open_settings()
+                time_storage_update_tvh = xbmcaddon.Addon().getSetting('timestorage')
+                param_update = '"path":"' + str(time_storage_update_tvh) + '"'
+            else:
+                dialog.ok('Tvheadend backend on network location', 'Your Tvheadend backend is located on a network. Currently Kodi cannot browse network folders.', 'Please enter the DVR recording location manually.')
+                time_storage_update_tvh = dialog.input('Edit the timeshift buffer path', defaultt=time_path,type=xbmcgui.INPUT_ALPHANUM)
+                xbmcaddon.Addon().setSetting(id='timestorage', value=time_storage_update_tvh)
+                param_update = '"path":"' + str(time_storage_update_tvh) + '"'
+        if sel_param == 3:
+            sel_num = dialog.input('Set maximum storage size for buffering (MB)', defaultt=str(time_max_size),type=xbmcgui.INPUT_NUMERIC)
+            if sel_num >= 0:
+                time_max_size = sel_num
+                param_update = '"max_size":' + str(time_max_size)
+        if sel_param == 4:
+            sel_num = dialog.input('Set maximum RAM size for buffering (MB)', defaultt=str(time_ram_size),type=xbmcgui.INPUT_NUMERIC)
+            if sel_num >= 0:
+                time_ram_size = sel_num
+                param_update = '"ram_size":' + str(time_ram_size)
+        if sel_param == 5:
+            sel_enabled = dialog.select('Enable/Disable to use RAM only', list=enabledisable)
+            if sel_enabled >= 0:
+                time_ram_only = truefalse[sel_enabled]
+                param_update = '"ram_only":' + time_ram_only
+        if sel_param == 6:
+            sel_enabled = dialog.select('Enable/Disable timeshift on-demand (no first rewind)', list=enabledisable)
+            if sel_enabled >= 0:
+                time_ondemand = truefalse[sel_enabled]
+                param_update = '"ondemand":' + time_ondemand
+        if sel_param == 7:
+            sel_enabled = dialog.select('Enable/Disable unlimited time (may cause slowdown)', list=enabledisable)
+            if sel_enabled >= 0:
+                time_unlimited_period = truefalse[sel_enabled]
+                param_update = '"unlimited_period":' + time_unlimited_period
+        if sel_param == 8:
+            sel_enabled = dialog.select('Enable/Disable unlimited size (uses all storage)', list=enabledisable)
+            if sel_enabled >= 0:
+                time_unlimited_size = truefalse[sel_enabled]
+                param_update = '"unlimited_size":' + time_unlimited_size
+        if sel_param == 9:
+            sel_enabled = dialog.select('Enable/Disable fit to RAM (clears oldest buffer)', list=enabledisable)
+            if sel_enabled >= 0:
+                time_ram_fit = truefalse[sel_enabled]
+                param_update = '"ram_fit":' + time_ram_fit
+        if sel_param == 5:
+            sel_enabled = dialog.select('Enable/Disable to include teletext data', list=enabledisable)
+            if sel_enabled >= 0:
+                time_teletext = truefalse[sel_enabled]
+                param_update = '"teletext":' + time_teletext
+        if param_update != "":
+            param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/timeshift/config/save?node={' + param_update + '}'
+            param_save = requests.get(param_url)
+            time_param_load(dvr_uuid_sel)
 
 def muxes_load(net_uuid_sel):
     net_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/load?uuid=' + str(net_uuid_sel)

@@ -9,5 +9,6 @@
     <setting label="" type="lsep"/>
     <setting label="32025" type="lsep"/>
     <setting label="32030"  type="folder"  id="dvrstorage"  default="" option="writeable"/>
+    <setting label="32035"  type="folder"  id="timestorage"  default="" option="writeable"/>
   </category>
 </settings>
