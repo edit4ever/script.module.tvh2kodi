@@ -9,4 +9,14 @@
 	<string id="32025">Tvheadend Paths</string>
 	<string id="32030">DVR Recording Path</string>
 	<string id="32035">Timeshift Buffer Path</string>
+	<string id="32100">Picons</string>
+	<string id="32130">Picons Source</string>
+	<string id="32131">CvH Picons - Name</string>
+	<string id="32132">CvH Picons - Frequency</string>
+	<string id="32133">ati711 - Color</string>
+	<string id="32134">ait711 - Black</string>
+	<string id="32135">ait711 - White</string>
+	<string id="32138">External URL</string>
+	<string id="32139">enter external URL</string>
+	<string id="32140">Picons Destination</string>
 </strings>

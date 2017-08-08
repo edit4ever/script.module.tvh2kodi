@@ -1,3 +1,23 @@
+#!/usr/bin/env python
+################################################################################
+#      This file is part of LibreELEC - https://libreelec.tv
+#      Copyright (C) 2016-2017 Team LibreELEC
+#      Copyright (C) 2017 Tnds82 (tndsrepo@gmail.com)
+#
+#  LibreELEC is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 2 of the License, or
+#  (at your option) any later version.
+#
+#  LibreELEC is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with LibreELEC.  If not, see <http://www.gnu.org/licenses/>.
+################################################################################
+
 import xbmc,xbmcaddon,xbmcvfs,xbmcgui,xbmcplugin
 import subprocess
 from subprocess import Popen
@@ -13,8 +33,8 @@ import time
 import ast
 import zipfile
 import datetime
-#from requests.exceptions import HTTPError
-#from requests.exceptions import ConnectionError
+import urllib
+import picons
 
 plugin = Plugin()
 dialog = xbmcgui.Dialog()
@@ -182,6 +202,48 @@ def ZipDir(inputDir, outputZip):
                     zipOut.write(fullPath, archiveRoot, zipfile.ZIP_DEFLATED)
     _ArchiveDirectory(inputDir)
     zipOut.close()
+
+def picons_param_load():
+    picons_source_list = ["CvH Picons - Name", "CvH Picons - Frequency", "ati711 - Color", "ait711 - Black", "ati711 - White", "URL"]
+    picons_source_value = xbmcaddon.Addon().getSetting('psource')
+    picons_source = picons_source_list[int(picons_source_value)]
+    picons_dest = xbmcaddon.Addon().getSetting('pdest')
+    picons_url = xbmcaddon.Addon().getSetting('purl')
+    picons_list = ["Picons Source: " + str(picons_source), "Picons Destination: " + str(picons_dest), "DOWNLOAD PICONS"]
+    sel_param = dialog.select('Picons Download - Select parameter', list=picons_list)
+    if sel_param < 0:
+        return
+    if sel_param >= 0:
+        if sel_param == 0:
+            sel_psource = dialog.select('Select Picons Source', list=picons_source_list)
+            if sel_psource < 0:
+                picons_param_load()
+            else:
+                picons_source_set = xbmcaddon.Addon().setSetting(id='psource', value=str(sel_psource))
+                picons_param_load()
+        if sel_param == 1:
+            picons_dest_update = dialog.browse(3, "Select Picons Destination", "files", defaultt=picons_dest)
+            picons_dest_set = xbmcaddon.Addon().setSetting(id='pdest', value=picons_dest_update)
+            picons_param_load()
+        if sel_param == 2:
+            addon = xbmcaddon.Addon(id='script.module.tvh2kodi')
+            addonname = addon.getAddonInfo('name')
+            addonfolder = addon.getAddonInfo('path')
+            addonicon = os.path.join(addonfolder, 'resources/icon.png')
+            addondata = xbmc.translatePath(addon.getAddonInfo('profile'))
+            snp_json = os.path.join(addondata, 'data/snp.json')
+            srp_json = os.path.join(addondata, 'data/srp.json')
+            url_latest = 'http://cvh.libreelec.tv/picons/latest2.json'
+            latest_json = urllib.urlopen(url_latest)
+            if picons_source_value == "0":
+                picons.compare_release_snp(snp_json)
+            if picons_source_value == "1":
+                picons.compare_release_srp(srp_json)
+            if picons_source_value == "5":
+                sel_purl = dialog.input('Enetr the Picons URL to Download', defaultt=picons_url,type=xbmcgui.INPUT_ALPHANUM)
+                if sel_purl != "":
+                    picons_url_set = xbmcaddon.Addon().setSetting(id='purl', value=str(sel_purl))
+                    picons.picons_ext(sel_purl)
 
 def dvr_param_load(dvr_uuid_sel):
     dvr_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/load?uuid=' + dvr_uuid_sel
@@ -2061,7 +2123,7 @@ def tvh():
     ch_icon_scheme, ch_icon_scheme_key, ch_icon_scheme_val = find_param_dict(tvh_config_load, 'chiconscheme', 'enum')
     picon_path = find_param(tvh_config_load, 'piconpath')
     picon_scheme, picon_scheme_key, picon_scheme_val = find_param_dict(tvh_config_load, 'piconscheme', 'enum')
-    tvh_config_info_list = ["DVB scan path: " + str(dvb_scan_path), "Prefer picon: " + str(prefer_picon), "Channel icon path: " + str(ch_icon_path), "Channel icon scheme: " + str(ch_icon_scheme), "Picon path: " + str(picon_path), "Picon scheme: " + str(picon_scheme), "RESET ALL CHANNEL ICONS", "BACKUP TVHEADEND USERDATA", "IMPORT TVHEADEND USERDATA"]
+    tvh_config_info_list = ["DVB scan path: " + str(dvb_scan_path), "Prefer picon: " + str(prefer_picon), "Channel icon path: " + str(ch_icon_path), "Channel icon scheme: " + str(ch_icon_scheme), "Picon path: " + str(picon_path), "Picon scheme: " + str(picon_scheme), "RESET ALL CHANNEL ICONS", "BACKUP TVHEADEND USERDATA", "IMPORT TVHEADEND USERDATA", "DOWNLOAD PICONS"]
     param_update = ""
     sel_tvh = dialog.select('Select a Tvh configuration parameter to edit', list=tvh_config_info_list)
     if sel_tvh < 0:
@@ -2173,6 +2235,8 @@ def tvh():
                 dialog.ok("Unable to Restart Tvheadend Service!", "Unable to restart the Tvheadend service.", "Please enable the service in Kodi addons.")
         else:
             dialog.ok("Tvheadend Service Still Running!", "Unable to stop the Tvheadend service.", "Unable to complete backup.")
+    if sel_tvh == 9:
+        picons_param_load()
     if param_update != "":
         param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/config/save?node={' + param_update + '}'
         param_save = requests.get(param_url)
