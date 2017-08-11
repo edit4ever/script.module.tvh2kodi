@@ -204,9 +204,18 @@ def ZipDir(inputDir, outputZip):
     zipOut.close()
 
 def picons_param_load():
-    picons_source_list = ["CvH Picons - Name", "CvH Picons - Frequency", "ati711 - Color", "ait711 - Black", "ati711 - White", "URL"]
+#    url_latest  = 'http://cvh.libreelec.tv/picons/latest2.json'
+    url_latest = 'http://test.mymomentumwebsite.com/latest2.json'
+    ljson = requests.get(url_latest).json()
+    picons_source_list = ['Custom URL']
+    picons_source_files = ['Custom URL']
+    for p in ljson['Picons']['latest']:
+        picons_source_list.append(p['desc'])
+    for n in ljson['Picons']['latest']:
+        picons_source_files.append(n['name'])
     picons_source_value = xbmcaddon.Addon().getSetting('psource')
     picons_source = picons_source_list[int(picons_source_value)]
+    picons_file = picons_source_files[int(picons_source_value)]
     picons_dest = xbmcaddon.Addon().getSetting('pdest')
     picons_url = xbmcaddon.Addon().getSetting('purl')
     picons_list = ["Picons Source: " + str(picons_source), "Picons Destination: " + str(picons_dest), "DOWNLOAD PICONS"]
@@ -226,24 +235,13 @@ def picons_param_load():
             picons_dest_set = xbmcaddon.Addon().setSetting(id='pdest', value=picons_dest_update)
             picons_param_load()
         if sel_param == 2:
-            addon = xbmcaddon.Addon(id='script.module.tvh2kodi')
-            addonname = addon.getAddonInfo('name')
-            addonfolder = addon.getAddonInfo('path')
-            addonicon = os.path.join(addonfolder, 'resources/icon.png')
-            addondata = xbmc.translatePath(addon.getAddonInfo('profile'))
-            snp_json = os.path.join(addondata, 'data/snp.json')
-            srp_json = os.path.join(addondata, 'data/srp.json')
-            url_latest = 'http://cvh.libreelec.tv/picons/latest2.json'
-            latest_json = urllib.urlopen(url_latest)
             if picons_source_value == "0":
-                picons.compare_release_snp(snp_json)
-            if picons_source_value == "1":
-                picons.compare_release_srp(srp_json)
-            if picons_source_value == "5":
-                sel_purl = dialog.input('Enetr the Picons URL to Download', defaultt=picons_url,type=xbmcgui.INPUT_ALPHANUM)
+                sel_purl = dialog.input('Enter the Picons URL to Download', defaultt=picons_url,type=xbmcgui.INPUT_ALPHANUM)
                 if sel_purl != "":
                     picons_url_set = xbmcaddon.Addon().setSetting(id='purl', value=str(sel_purl))
-                    picons.picons_ext(sel_purl)
+                    picons.url_external(sel_purl)
+            if picons_source_value > "0":
+                picons.compare_release(url_latest, picons_file, picons_source_value)
 
 def dvr_param_load(dvr_uuid_sel):
     dvr_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/load?uuid=' + dvr_uuid_sel

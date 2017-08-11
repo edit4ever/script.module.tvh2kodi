@@ -18,7 +18,7 @@
 
 * minimum version of Tvheadend is 4.2
 v1.9.5
-- add picons downloader test
+- add picons downloader
 v1.9
 - add timeshift options under DVR configuration
 - fix epg grabber progress bar

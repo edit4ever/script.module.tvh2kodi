@@ -24,7 +24,6 @@ import shutil, datetime, sys
 from urlparse import urlparse
 from os.path import splitext
 
-
 addon       = xbmcaddon.Addon(id='script.module.tvh2kodi')
 addonname   = addon.getAddonInfo('name')
 addonfolder = addon.getAddonInfo('path')
@@ -34,16 +33,13 @@ logfile     = os.path.join(addondata, 'data/')
 tempfolder  = os.path.join(addondata, 'temp/')
 picons_dest = xbmc.translatePath(xbmcaddon.Addon().getSetting('pdest'))
 pdest       = os.path.join(picons_dest)
-zstd        = os.path.join(addonfolder, 'bin', 'zstd')
-url_latest  = 'http://cvh.libreelec.tv/picons/latest2.json'
+url_latest = 'http://test.mymomentumwebsite.com/latest2.json'
 latest_json = urllib.urlopen(url_latest)
-snp_json    = os.path.join(addondata, 'data/snp.json')
-srp_json    = os.path.join(addondata, 'data/srp.json')
+log_json    = os.path.join(addondata, 'data/log.json')
 log3rdparty = os.path.join(addondata, 'data/3rdparty.log')
 logfile     = os.path.join(addondata, 'data')
 log3rdparty = os.path.join(logfile, '3rdparty.log')
-logsnpjson  = os.path.join(logfile, 'snp.json')
-logsrpjson  = os.path.join(logfile, 'srp.json')
+logjson     = os.path.join(logfile, 'log.json')
 exturl      = addon.getSetting('purl')
 dialog      = xbmcgui.Dialog()
 header      = 'Picons Downloader'
@@ -53,99 +49,39 @@ exturl      = xbmcaddon.Addon().getSetting('purl')
 now         = datetime.datetime.now()
 date        = '%s-%s-%s' % (now.year,now.month,now.day)
 
-def compare_release_snp(path):
+def compare_release(url_latest, picons_file, picons_source_value):
     ljson = json.loads(latest_json.read())
-    for key in ljson['Picons']['latest'].keys():
-        latest = key
-    if os.path.exists(snp_json):
-        with open(snp_json) as release_json:
+    picons_src = int(picons_source_value) - 1
+    latest = ljson['Picons']['latest'][picons_src]['name']
+    if os.path.exists(log_json):
+        with open(log_json) as release_json:
             rjson = json.load(release_json)
-        for key1 in rjson['Picons']['latest'].keys():
-            release = key1
+            release = rjson['Picons']['latest'][picons_src]['name']
         if latest == release:
             if dialog.yesno('Picons Downloader Update', 'Already on latest version.', 'Do you want to download anyway?'):
-                delete_file(path)
+                delete_file(log_json)
                 urlpicons = ljson['Picons']['url']
-                snpname   = ljson['Picons']['latest'][latest]['snp']['name'] + ".tar.xz"
-                url = "%s%s" % (urlpicons, snpname)
-                picons_snp(url, url_latest)
+                url_base = "%s%s" % (urlpicons, picons_file)
+                picons_get(url_base, url_latest)
                 xbmc.executebuiltin('Notification(%s, %s, %d, %s)'%(addonname, '"Download finished"', 2000, addonicon))
             else:
                 return
         else:
             if dialog.yesno('Picons Downloader Update', 'There is a newer version of the icons pack available.', 'Do you want to download anyway?'):
-                delete_file(path)
+                delete_file(log_json)
                 urlpicons = ljson['Picons']['url']
-                snpname   = ljson['Picons']['latest'][latest]['snp']['name'] + ".tar.xz"
-                url = "%s%s" % (urlpicons, snpname)
-                picons_snp(url, url_latest)
-                xbmc.executebuiltin('Notification(%s, %s, %d, %s)'%(addonname, '"Download finished"', 2000, addonicon))
-            else:
-                return
-    else:
-        urlpicons = ljson['Picons']['url']
-        snpname   = ljson['Picons']['latest'][latest]['snp']['name'] + ".tar.xz"
-        url = "%s%s" % (urlpicons, snpname)
-        picons_snp(url, url_latest)
-        xbmc.executebuiltin('Notification(%s, %s, %d, %s)'%(addonname, '"Download finished"', 2000, addonicon))
-
-def compare_release_srp(path):
-    ljson = json.loads(latest_json.read())
-    for key in ljson['Picons']['latest'].keys():
-        latest = key
-    if os.path.exists(srp_json):
-        with open(srp_json) as release_json:
-            rjson = json.load(release_json)
-        for key1 in rjson['Picons']['latest'].keys():
-            release = key1
-        if latest == release:
-            if dialog.yesno('Picons Downloader Update', 'Already on latest version.', 'Do you want to download anyway?'):
-                delete_file(path)
-                urlpicons = ljson['Picons']['url']
-                srpname   = ljson['Picons']['latest'][latest]['srp']['name'] + ".tar.xz"
-                url = "%s%s" % (urlpicons, srpname)
-                picons_srp(url, url_latest)
-                xbmc.executebuiltin('Notification(%s, %s, %d, %s)'%(addonname, '"Download finished"', 4000, addonicon))
-            else:
-                return
-        else:
-            if dialog.yesno('Picons Downloader Update', 'There is a newer version of the icons pack available.', 'Do you want to download anyway?'):
-                delete_file(path)
-                urlpicons = ljson['Picons']['url']
-                srpname   = ljson['Picons']['latest'][latest]['srp']['name'] + ".tar.xz"
-                url = "%s%s" % (urlpicons, srpname)
-                picons_srp(url, url_latest)
+                url_base = "%s%s" % (urlpicons, picons_file)
+                picons_get(url_base, url_latest)
                 xbmc.executebuiltin('Notification(%s, %s, %d, %s)'%(addonname, '"Download finished"', 4000, addonicon))
             else:
                 return
     else:
         urlpicons = ljson['Picons']['url']
-        srpname   = ljson['Picons']['latest'][latest]['srp']['name'] + ".tar.xz"
-        url = "%s%s" % (urlpicons, srpname)
-        picons_srp(url, url_latest)
+        url = "%s%s" % (urlpicons, picons_file)
+        picons_get(url, url_latest)
         xbmc.executebuiltin('Notification(%s, %s, %d, %s)'%(addonname, '"Download finished"', 4000, addonicon))
 
-def url_snp():
-    ljson = json.loads(latest_json.read())
-    for key in ljson['Picons']['latest'].keys():
-        latest = key
-    urlpicons = ljson['Picons']['url']
-    snpname   = ljson['Picons']['latest'][latest]['snp']['name'] + ".tar.xz"
-    url = "%s%s" % (urlpicons, snpname)
-    picons_snp(url, url_latest)
-    xbmc.executebuiltin('Notification(%s, %s, %d, %s)'%(addonname, '"Download the picons is finish"', 4000, addonicon))
-
-def url_srp():
-    ljson = json.loads(latest_json.read())
-    for key in ljson['Picons']['latest'].keys():
-        latest = key
-    urlpicons = ljson['Picons']['url']
-    srpname   = ljson['Picons']['latest'][latest]['srp']['name'] + ".tar.xz"
-    url = "%s%s" % (urlpicons, srpname)
-    picons_srp(url, url_latest)
-    xbmc.executebuiltin('Notification(%s, %s, %d, %s)'%(addonname, '"Download the picons is finish"', 4000, addonicon))
-
-def url_external():
+def url_external(sel_purl):
     if addon.getSetting('pdest') == '':
         xbmcgui.Dialog().ok(addonname, "You need choose destination for picons", "", "")
         return
@@ -153,7 +89,7 @@ def url_external():
         xbmcgui.Dialog().ok(addonname, "You need choose the external url", "", "")
         return
     else:
-        picons_ext(exturl)
+        picons_ext(sel_purl)
         xbmc.executebuiltin('Notification(%s, %s, %d, %s)'%(addonname, '"Download the picons is finish"', 4000, addonicon))
 
 def create_directories(path):
@@ -235,35 +171,26 @@ def extract_zip(_in, _out, dp, header):
         return False
     return True
 
-def picons_snp(url, urljson):
+def picons_get(url_base, urljson):
     create_directories(tempfolder)
-#    packageFile = os.path.join(tempfolder, 'picons-snp.tar.zst')
-    packageFile = os.path.join(tempfolder, 'picons-snp.tar.xz')
-    downloader(url,packageFile,header)
-    create_directories(pdest)
-#    extract_zstd(packageFile)
-    extract_xz(packageFile)
+    try:
+        packageFile = os.path.join(tempfolder, 'picons-snp.tar.zst')
+        url = url_base + ".tar.zst"
+        downloader(url,packageFile,header)
+        create_directories(pdest)
+        extract_zstd(packageFile)
+    except:
+        packageFile = os.path.join(tempfolder, 'picons-snp.tar.xz')
+        url = url_base + ".tar.xz"
+        downloader(url,packageFile,header)
+        create_directories(pdest)
+        extract_xz(packageFile)
     extract_tar('picons-snp.tar', pdest)
     delete_tempfiles()
     create_log
     create_directories(logfile)
-    delete_file(logsnpjson)
-    subprocess_cmd('%s %s %s' % ('wget -O', logsnpjson, urljson))
-
-def picons_srp(url, urljson):
-    create_directories(tempfolder)
-#    packageFile = os.path.join(tempfolder, 'picons-srp.tar.zst')
-    packageFile = os.path.join(tempfolder, 'picons-srp.tar.xz')
-    downloader(url,packageFile,header)
-    create_directories(pdest)
-#    extract_zstd(packageFile)
-    extract_xz(packageFile)
-    extract_tar('picons-srp.tar', pdest)
-    delete_tempfiles()
-    create_log
-    create_directories(logfile)
-    delete_file(logsrpjson)
-    subprocess_cmd('%s %s %s' % ('wget -O', logsrpjson, urljson))
+    delete_file(logjson)
+    subprocess_cmd('%s %s %s' % ('wget -O', logjson, urljson))
 
 def picons_ext(url):
     parsed = urlparse(exturl)
