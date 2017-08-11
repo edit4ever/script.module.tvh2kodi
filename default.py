@@ -204,8 +204,7 @@ def ZipDir(inputDir, outputZip):
     zipOut.close()
 
 def picons_param_load():
-#    url_latest  = 'http://cvh.libreelec.tv/picons/latest2.json'
-    url_latest = 'http://test.mymomentumwebsite.com/latest2.json'
+    url_latest  = 'http://cvh.libreelec.tv/picons/latest2.json'
     ljson = requests.get(url_latest).json()
     picons_source_list = ['Custom URL']
     picons_source_files = ['Custom URL']
