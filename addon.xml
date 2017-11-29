@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addon id="script.module.tvh2kodi"
        name="Tvheadend Setup for Kodi"
-       version="1.9"
+       version="1.9.6"
        provider-name="edit4ever">
   <requires>
     <import addon="xbmc.python" version="2.6.0"/>
@@ -17,9 +17,7 @@
     <description>Tvh2Kodi gives access to the basic Tvheadend settings directly from the Kodi interface. This can be used in place of the Tvheadend web interface to get your Tvheadend backend server configured and running.  It is also provides an easy way to scan for new services and channels and to configure your channel EPG sources.
 
 * minimum version of Tvheadend is 4.2
-v1.9
-- add timeshift options under DVR configuration
-- fix epg grabber progress bar
+
     </description>
     <disclaimer>Copyright (C) 2017 edit4ever - edit4ever@gmail.com</disclaimer>
     <platform>all</platform>
@@ -32,16 +30,9 @@ v1.9
         <screenshot>resources/screenshot-03.jpg</screenshot>
     </assets>
     <news>
-v1.8.1 - fix username-password display
-v1.8 - add support for IPTV Networks - fix error in muxes when 0 muxes available
-v1.7 - add support for Tvh username-password
-v1.6 - add backup and import of tvh userdata - add channel icon reset option
-v1.5 - add progress bar for internal epg grab - add base tvh config parameters (set dvb scan files and channel icon paths)
-v1.4 - fix adapter network issue - add multiple network support to adapter - allow custom Tvh server ip to be recalled
-v1.3 - add support for DVB-S mux editing
-v1.2 - fix error in network parameters load - fix wrong epg parameter selection
-v1.1 - add triggers for OTA and internal grabbers
-v1.0 - Initial Release
-     </news>
+  1.9.6 - add epg grabber cron wizard
+  1.9.5 - add picons downloader (test)
+  1.9 - add timeshift options under DVR configuration - fix epg grabber progress bar
+    </news>
   </extension>
 </addon>

@@ -9,4 +9,7 @@
 	<string id="32025">Tvheadend Paths</string>
 	<string id="32030">DVR Recording Path</string>
 	<string id="32035">Timeshift Buffer Path</string>
+	<string id="32130">Picons Source</string>
+	<string id="32139">enter external URL</string>
+	<string id="32140">Picons Destination</string>
 </strings>
