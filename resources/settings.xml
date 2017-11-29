@@ -13,7 +13,7 @@
     <setting label="32030"  type="folder"  id="dvrstorage"  default="" option="writeable"/>
     <setting label="32035"  type="folder"  id="timestorage"  default="" option="writeable"/>
     <setting label="32130" type="number" id="psource" default="0" visible="false"/>
-    <setting label="32139" type="text" id="purl" defaut="https://www.dropbox.com/s/vxuatbj95iutsby/tv_channel_icons_pack.zip?dl=0" visible="false"/>
-    <setting label="32140"  type="folder"  id="pdest"  default="" option="writeable"/>
+    <setting label="32139" type="text" id="purl" defaut="" visible="false"/>
+    <setting label="32140"  type="folder"  id="pdest"  default="/storage/picons/tvh/" option="writeable"/>
   </category>
 </settings>
