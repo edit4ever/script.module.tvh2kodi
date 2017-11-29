@@ -1136,7 +1136,7 @@ def ch_param_edit(ch_uuid_sel, ch_info_list, ch_enabled, ch_autoname, ch_name, c
                 param_update = '"autoname":' + ch_autoname
         if sel_param == 4:
             sel_ch_icon = dialog.input('Edit the channel icon URL', defaultt=ch_icon,type=xbmcgui.INPUT_ALPHANUM)
-            if sel_ch_name == "":
+            if sel_ch_icon == "":
                 ch_param_load(ch_uuid_sel)
             else:
                 param_update = '"icon":"' + sel_ch_icon + '"'
@@ -1167,6 +1167,45 @@ def ch_param_edit(ch_uuid_sel, ch_info_list, ch_enabled, ch_autoname, ch_name, c
             ch_param_load(ch_uuid_sel)
 
 
+def cron_edit(epg_intcron):
+    cron_def_weekday_list = ['Everyday', 'Every Other Day', 'on Sundays', 'on Mondays', 'on Tuesdays', 'on Wednesdays', 'on Thursdays', 'on Fridays', 'on Saturdays']
+    cron_def_weekday = {'*':'Everyday', '2-30/2': 'Every Other Day', '0':'on Sundays', '1':'on Mondays', '2':'on Tuesdays', '3':'on Wednesdays', '4':'on Thursdays', '5':'on Fridays', '6':'on Saturdays'}
+    cron_def_split_hour_list = ['Specific Hour', '2x a Day', '3x a Day', '4x a Day', '6x a Day', '8x a Day', '12x a Day', 'every Hour']
+    cron_def_split_hour = {'*':'every Hour', '*/2':'12x a Day', '*/3':'8x a Day', '*/4':'6x a Day','*/6':'4x a Day', '*/8':'3x a Day', '*/12':'2x a Day'}
+    cron_def_hours = ['12:00AM - Midnight', '1:00AM', '2:00AM', '3:00AM', '4:00AM', '5:00AM', '6:00AM', '7:00AM', '8:00AM', '9:00AM', '10:00AM', '11:00AM', '12:00PM - Noon', '1:00PM', '2:00PM', '3:00PM', '4:00PM', '5:00PM', '6:00PM', '7:00PM', '8:00PM', '9:00PM', '10:00PM', '11:00PM']
+    epg_intcron_clean = re.sub('#.*\n', '', epg_intcron)
+    cron_current = epg_intcron_clean.split(' ')
+    cron_current_min = str(int(cron_current[0])).zfill(2)
+    if '*' in cron_current[1]:
+        cron_current_str = cron_current_min + ' Minutes past the hour, ' + cron_def_split_hour[cron_current[1]] + ', ' + cron_def_weekday[cron_current[2]]
+    else:
+        cron_ampm = 'AM'
+        if cron_current[1] == '00' or cron_current[1] == '0':
+            cron_current_hour = '12'
+        elif int(cron_current[1]) > 12:
+            cron_current_hour = str(24 - int(cron_current[1]))
+            cron_ampm = 'PM'
+        else:
+            cron_current_hour = cron_current[1]
+        cron_current_str = cron_current_hour + ':' + cron_current_min + cron_ampm + ' - ' + cron_def_weekday[cron_current[2]]
+    cron_edit_sel = dialog.yesno('Cron edit', 'The grabber is set to run at:', cron_current_str, 'Do you wish to edit this cron setting?')
+    if cron_edit_sel:
+        cron_sel_weekday = dialog.select('Select which day(s) to run the grabber', list=cron_def_weekday_list)
+        if cron_sel_weekday >= 0:
+            cron_new_weekday = cron_def_weekday.keys()[cron_def_weekday.values().index(cron_def_weekday_list[cron_sel_weekday])]
+        cron_sel_hour = dialog.select('Select which hour(s) to run the grabber', list=cron_def_split_hour_list)
+        if cron_sel_hour == 0:
+            cron_sel_hour_spec = dialog.select('Select which hour(s) to run the grabber', list=cron_def_hours)
+            cron_new_hour = cron_sel_hour_spec
+        if cron_sel_hour > 0:
+            cron_new_hour = cron_def_split_hour.keys()[cron_def_split_hour.values().index(cron_def_split_hour_list[cron_sel_hour])]
+        cron_new_min = dialog.input('Enter the minutes after the hour to run the grabber', defaultt='0', type=xbmcgui.INPUT_NUMERIC)
+        cron_update = str(cron_new_min) + ' ' + str(cron_new_hour) + ' ' + cron_new_weekday + ' * *'
+        return cron_update
+    else:
+        return epg_intcron
+
+
 def epg_param(sel_epg, epg_rename, epg_renumber, epg_reicon, epg_dbsave, epg_intcron, epg_otainit, epg_otacron, epg_otatime):
     param_update = ""
     if sel_epg == 3:
@@ -1190,9 +1229,15 @@ def epg_param(sel_epg, epg_rename, epg_renumber, epg_reicon, epg_dbsave, epg_int
             sel_epg_dbsave = epg_dbsave
         param_update = '"epgdb_periodicsave":' + str(sel_epg_dbsave)
     if sel_epg == 7:
-        sel_epg_intcron = dialog.input('Edit the cron multiline for internal grabbers', defaultt=epg_intcron,type=xbmcgui.INPUT_ALPHANUM)
-        if sel_epg_intcron == "":
-            sel_epg_intcron = epg_intcron
+        sel_epg_intcron_type = dialog.yesno('Edit the cron for internal grabbers', 'If you are familiar with cron settings you can manually enter the cron.', '', 'Otherwise use the wizard to select the grabber run times.', 'Wizard', 'Manual')
+        if sel_epg_intcron_type:
+            sel_epg_intcron = dialog.input('Edit the cron multiline for internal grabbers', defaultt=epg_intcron,type=xbmcgui.INPUT_ALPHANUM)
+            if sel_epg_intcron == "":
+                sel_epg_intcron = epg_intcron
+        else:
+            sel_epg_intcron = cron_edit(epg_intcron)
+            if sel_epg_intcron == "":
+                sel_epg_intcron = epg_intcron
         param_update = '"cron":"' + sel_epg_intcron + '"'
     if sel_epg == 8:
         sel_epg_otainit = dialog.select('Enable or disable initial EPG grab at startup', list=enabledisable)
@@ -1200,10 +1245,16 @@ def epg_param(sel_epg, epg_rename, epg_renumber, epg_reicon, epg_dbsave, epg_int
             epg_otainit = truefalse[sel_epg_otainit]
             param_update = '"ota_initial":' + epg_otainit
     if sel_epg == 9:
-        sel_epg_otacron = dialog.input('Edit the cron multiline for over-the-air grabbers', defaultt=epg_otacron,type=xbmcgui.INPUT_ALPHANUM)
-        if sel_epg_otacron == "":
-            sel_epg_otacron = epg_otacron
-        param_update = '"cron":"' + sel_epg_otacron + '"'
+        sel_epg_otacron_type = dialog.yesno('Edit the cron for OTA grabbers', 'If you are familiar with cron settings you can manually enter the cron.', '', 'Otherwise use the wizard to select the grabber run times.', 'Wizard', 'Manual')
+        if sel_epg_otacron_type:
+            sel_epg_otacron = dialog.input('Edit the cron multiline for over-the-air grabbers', defaultt=epg_otacron,type=xbmcgui.INPUT_ALPHANUM)
+            if sel_epg_otacron == "":
+                sel_epg_otacron = epg_otacron
+        else:
+            sel_epg_otacron = cron_edit(epg_otacron)
+            if sel_epg_otacron == "":
+                sel_epg_otacron = epg_otacron
+        param_update = '"ota_cron":"' + sel_epg_otacron + '"'
     if sel_epg == 10:
         sel_epg_otatime = dialog.input('OTA EPG scan timeout in seconds (30-7200)', defaultt=str(epg_otatime),type=xbmcgui.INPUT_NUMERIC)
         if sel_epg_otatime == "":
@@ -1751,8 +1802,6 @@ def wizard_start():
         for adapter_t in adapter_get:
             adapter_list.append(adapter_t['text'])
     sel_adapter = dialog.select('Select which adapter you would like to setup first', list=adapter_list)
-    if sel_adapter < 0:
-        return
     if sel_adapter >= 0:
         adapter_uuid_sel = adapter_uuid[sel_adapter]
         adapter_text_sel = adapter_list[sel_adapter]
@@ -1902,8 +1951,6 @@ def adapters():
     adapters_full = zip(adapter_text, adapter_enabled)
     adapters_list = ["%s %s" % x for x in adapters_full]
     sel_adapter = dialog.select('Select which adapter you would like to configure', list=adapters_list)
-    if sel_adapter < 0:
-        return
     if sel_adapter >= 0:
         adapter_uuid_sel = adapter_uuid[sel_adapter]
         adapt_param_load(adapter_uuid_sel)
@@ -1919,8 +1966,6 @@ def networks():
     for net_u in networks['entries']:
         net_uuid.append(net_u['uuid'])
     sel_network = dialog.select('Select a network to configure', list=net_name)
-    if sel_network < 0:
-        return
     if sel_network == 0:
         net_uuid_sel = network_new()
         if net_uuid_sel == "":
@@ -1942,8 +1987,6 @@ def muxes():
     for net_u in networks['entries']:
         net_uuid.append(net_u['uuid'])
     sel_network = dialog.select('Select a network to see list of muxes', list=net_name)
-    if sel_network < 0:
-        return
     if sel_network >= 0:
         net_uuid_sel = net_uuid[sel_network]
         muxes_load(net_uuid_sel)

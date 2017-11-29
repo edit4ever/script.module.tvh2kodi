@@ -55,7 +55,7 @@ def compare_release(url_latest, picons_file, picons_source_value):
     ljson = json.loads(latest_json.read())
     picons_src = int(picons_source_value) - 1
     latest = ljson['Picons']['latest'][picons_src]['name']
-    if os.path.exists(log_json):
+    if os.path.isfile(log_json):
         with open(log_json) as release_json:
             rjson = json.load(release_json)
             release = rjson['Picons']['latest'][picons_src]['name']
