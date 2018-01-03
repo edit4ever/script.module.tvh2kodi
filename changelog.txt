@@ -1,3 +1,7 @@
+v2.0 (2018-01-03)
+ - add support for DVB-S adapter and LNB configuration
+ - add support for Conditional Access Clients
+
 v1.9.6 (2017-11-29)
  - add epg grabber cron wizard
 

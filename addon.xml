@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addon id="script.module.tvh2kodi"
        name="Tvheadend Setup for Kodi"
-       version="1.9.6"
+       version="2.0"
        provider-name="edit4ever">
   <requires>
     <import addon="xbmc.python" version="2.6.0"/>
@@ -30,9 +30,7 @@
         <screenshot>resources/screenshot-03.jpg</screenshot>
     </assets>
     <news>
-  1.9.6 - add epg grabber cron wizard
-  1.9.5 - add picons downloader (test)
-  1.9 - add timeshift options under DVR configuration - fix epg grabber progress bar
+  2.0 - add support for DVB-S adapter and LNB configuration | adds CA client support
     </news>
   </extension>
 </addon>

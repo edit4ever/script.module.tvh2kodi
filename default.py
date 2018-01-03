@@ -96,11 +96,43 @@ def find_param(d, param_id):
             value = "NO PARAMATER FOUND"
     return value
 
+def find_param_item(d, param_id, item):
+    for param in d['entries'][0]['params']:
+        if param['id'] == param_id:
+            try:
+                value = param[item]
+            except:
+                value = ""
+            break
+        else:
+            value = "NO PARAMATER FOUND"
+    return value
+
 def find_param_dict(d, param_id, param_id2):
     param_value = find_param(d, param_id)
     for param in d['entries'][0]['params']:
         if param['id'] == param_id:
             param_dict = param[param_id2]
+            break
+        else:
+            param_dict = "NO PARAMATER FOUND"
+    param_key = []
+    param_val = []
+    for param_k in param_dict:
+        param_key.append(param_k['key'])
+    for param_v in param_dict:
+        param_val.append(param_v['val'])
+    try:
+        param_index = param_key.index(param_value)
+        return (param_val[param_index], param_key, param_val)
+    except:
+        return (param_value, param_key, param_val)
+
+def find_param_enum(d, param_id, param_id2):
+    param_value = find_param(d, param_id)
+    for param in d['entries'][0]['params']:
+        if param['id'] == param_id:
+            param_dict = param['enum']
             break
         else:
             param_dict = "NO PARAMATER FOUND"
@@ -1166,7 +1198,6 @@ def ch_param_edit(ch_uuid_sel, ch_info_list, ch_enabled, ch_autoname, ch_name, c
             param_save = requests.get(param_url)
             ch_param_load(ch_uuid_sel)
 
-
 def cron_edit(epg_intcron):
     cron_def_weekday_list = ['Everyday', 'Every Other Day', 'on Sundays', 'on Mondays', 'on Tuesdays', 'on Wednesdays', 'on Thursdays', 'on Fridays', 'on Saturdays']
     cron_def_weekday = {'*':'Everyday', '2-30/2': 'Every Other Day', '0':'on Sundays', '1':'on Mondays', '2':'on Tuesdays', '3':'on Wednesdays', '4':'on Thursdays', '5':'on Fridays', '6':'on Saturdays'}
@@ -1204,7 +1235,6 @@ def cron_edit(epg_intcron):
         return cron_update
     else:
         return epg_intcron
-
 
 def epg_param(sel_epg, epg_rename, epg_renumber, epg_reicon, epg_dbsave, epg_intcron, epg_otainit, epg_otacron, epg_otatime):
     param_update = ""
@@ -1353,25 +1383,376 @@ def epgmod_param_edit(epgmod_uuid_sel, epgmod_info_list, epgmod_enabled, epgmod_
 def adapt_param_load(adapter_uuid_sel):
     adapt_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/load?uuid=' + adapter_uuid_sel
     adapt_load = requests.get(adapt_url).json()
+    adapt_class = adapt_load['entries'][0]['class']
     adapt_enabled = find_param(adapt_load, 'enabled')
     adapt_priority = find_param(adapt_load, 'priority')
     adapt_name = find_param(adapt_load, 'displayname')
     adapt_otaepg = find_param(adapt_load, 'ota_epg')
     adapt_init = find_param(adapt_load, 'initscan')
     adapt_idle = find_param(adapt_load, 'idlescan')
-    adapt_network = find_param(adapt_load, 'networks')
-    adapt_network_uuid_list = find_list(adapt_load, 'networks', 'value')
-    if adapt_network == []:
-        adapt_network = ""
+    if adapt_class == 'linuxdvb_frontend_dvbs':
+        adapt_satconf, adapt_satconf_key, adapt_satconf_val = find_param_dict(adapt_load, 'satconf', 'enum')
+        adapt_info_list = ["Name: " + str(adapt_name), "Enabled: " + str(adapt_enabled), "Satellite config: " + str(adapt_satconf), "EDIT SATELLITE LNB/SWITCH", "Priority: " + str(adapt_priority), "Enable OTA EPG scanning: " + str(adapt_otaepg), "Allow initial scanning on startup: " + str(adapt_init), "Allow idle scanning: " + str(adapt_idle)]
+        adapt_param_dvbsedit(adapter_uuid_sel, adapt_info_list, adapt_enabled, adapt_name, adapt_priority, adapt_otaepg, adapt_init, adapt_idle, adapt_satconf, adapt_satconf_key, adapt_satconf_val)
     else:
-        adapt_network_name = []
-        for net_u in adapt_network_uuid_list:
-            adapt_network_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/load?uuid=' + str(net_u)
-            adapt_network_load = requests.get(adapt_network_url).json()
-            adapt_network_name.append(adapt_network_load['entries'][0]['text'])
-        adapt_network = '  &  '.join(str(s) for s in adapt_network_name)
-    adapt_info_list = ["Name: " + str(adapt_name), "Enabled: " + str(adapt_enabled), "Networks: " + str(adapt_network), "Priority: " + str(adapt_priority), "Enable OTA EPG scanning: " + str(adapt_otaepg), "Allow initial scanning on startup: " + str(adapt_init), "Allow idle scanning: " + str(adapt_idle)]
-    adapt_param_edit(adapter_uuid_sel, adapt_info_list, adapt_enabled, adapt_name, adapt_network, adapt_network_uuid_list, adapt_priority, adapt_otaepg, adapt_init, adapt_idle)
+        adapt_network = find_param(adapt_load, 'networks')
+        adapt_network_uuid_list = find_list(adapt_load, 'networks', 'value')
+        if adapt_network == []:
+            adapt_network = ""
+        else:
+            adapt_network_name = []
+            for net_u in adapt_network_uuid_list:
+                adapt_network_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/load?uuid=' + str(net_u)
+                adapt_network_load = requests.get(adapt_network_url).json()
+                adapt_network_name.append(adapt_network_load['entries'][0]['text'])
+            adapt_network = '  &  '.join(str(s) for s in adapt_network_name)
+        adapt_info_list = ["Name: " + str(adapt_name), "Enabled: " + str(adapt_enabled), "Networks: " + str(adapt_network), "Priority: " + str(adapt_priority), "Enable OTA EPG scanning: " + str(adapt_otaepg), "Allow initial scanning on startup: " + str(adapt_init), "Allow idle scanning: " + str(adapt_idle)]
+        adapt_param_edit(adapter_uuid_sel, adapt_info_list, adapt_enabled, adapt_name, adapt_network, adapt_network_uuid_list, adapt_priority, adapt_otaepg, adapt_init, adapt_idle)
+
+def lnb_param_load(adapter_uuid_sel):
+    lnb_find_url = 'http://' + tvh_url + ':' + tvh_port + '/api/hardware/tree?uuid=' + adapter_uuid_sel
+    lnb_find_load = requests.get(lnb_find_url).json()
+    lnb_uuid = lnb_find_load[0]['uuid']
+    lnb_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/load?uuid=' + lnb_uuid
+    lnb_load = requests.get(lnb_url).json()
+    lnb_class = lnb_load['entries'][0]['class']
+    lnb_name = lnb_load['entries'][0]['text']
+    lnb_early_tune = find_param(lnb_load, 'early_tune')
+    lnb_diseqc_repeats = find_param(lnb_load, 'diseqc_repeats')
+    lnb_diseqc_full = find_param(lnb_load, 'diseqc_full')
+    lnb_poweroff = find_param(lnb_load, 'lnb_poweroff')
+    if lnb_class == 'linuxdvb_satconf_lnbonly':
+        lnb_network = find_param(lnb_load, 'networks')
+        lnb_network_uuid_list = find_list(lnb_load, 'networks', 'value')
+        if lnb_network == []:
+            lnb_network = ""
+        else:
+            lnb_network_name = []
+            for net_u in lnb_network_uuid_list:
+                lnb_network_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/load?uuid=' + str(net_u)
+                lnb_network_load = requests.get(lnb_network_url).json()
+                lnb_network_name.append(lnb_network_load['entries'][0]['text'])
+            lnb_network = '  &  '.join(str(s) for s in lnb_network_name)
+        lnb_info_list = ["Name: " + str(lnb_name), "Tune before DiseqC: " + str(lnb_early_tune), "DiseqC repeats: " + str(lnb_diseqc_repeats), "Full DiseqC: " + str(lnb_diseqc_full), "Turn off LNB when idle: " + str(lnb_poweroff), "Networks: " + str(lnb_network)]
+        lnb_only_param_edit(lnb_uuid, lnb_info_list, lnb_name, lnb_early_tune, lnb_diseqc_repeats, lnb_diseqc_full, lnb_poweroff, lnb_network, lnb_network_uuid_list, adapter_uuid_sel)
+    if lnb_class == 'linuxdvb_satconf_2port':
+        lnb_network_a = find_param(lnb_load, 'network_a')
+        lnb_network_a_uuid_list = find_list(lnb_load, 'network_a', 'value')
+        if lnb_network_a == []:
+            lnb_network_a = ""
+        else:
+            lnb_network_a_name = []
+            for net_u in lnb_network_a_uuid_list:
+                lnb_network_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/load?uuid=' + str(net_u)
+                lnb_network_load = requests.get(lnb_network_url).json()
+                lnb_network_a_name.append(lnb_network_load['entries'][0]['text'])
+            lnb_network_a = '  &  '.join(str(s) for s in lnb_network_a_name)
+        lnb_network_b = find_param(lnb_load, 'network_b')
+        lnb_network_b_uuid_list = find_list(lnb_load, 'network_b', 'value')
+        if lnb_network_b == []:
+            lnb_network_b = ""
+        else:
+            lnb_network_b_name = []
+            for net_u in lnb_network_b_uuid_list:
+                lnb_network_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/load?uuid=' + str(net_u)
+                lnb_network_load = requests.get(lnb_network_url).json()
+                lnb_network_b_name.append(lnb_network_load['entries'][0]['text'])
+            lnb_network_b = '  &  '.join(str(s) for s in lnb_network_b_name)
+        lnb_info_list = ["Name: " + str(lnb_name), "Tune before DiseqC: " + str(lnb_early_tune), "DiseqC repeats: " + str(lnb_diseqc_repeats), "Full DiseqC: " + str(lnb_diseqc_full), "Turn off LNB when idle: " + str(lnb_poweroff), "Network A: " + str(lnb_network_a), "Network B: " + str(lnb_network_b)]
+        lnb_2port_param_edit(lnb_uuid, lnb_info_list, lnb_name, lnb_early_tune, lnb_diseqc_repeats, lnb_diseqc_full, lnb_poweroff, lnb_network_a, lnb_network_a_uuid_list, lnb_network_b, lnb_network_b_uuid_list, adapter_uuid_sel)
+    if lnb_class == 'linuxdvb_satconf_4port':
+        lnb_network_aa = find_param(lnb_load, 'network_aa')
+        lnb_network_aa_uuid_list = find_list(lnb_load, 'network_aa', 'value')
+        if lnb_network_aa == []:
+            lnb_network_aa = ""
+        else:
+            lnb_network_aa_name = []
+            for net_u in lnb_network_aa_uuid_list:
+                lnb_network_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/load?uuid=' + str(net_u)
+                lnb_network_load = requests.get(lnb_network_url).json()
+                lnb_network_aa_name.append(lnb_network_load['entries'][0]['text'])
+            lnb_network_aa = '  &  '.join(str(s) for s in lnb_network_aa_name)
+        lnb_network_ab = find_param(lnb_load, 'network_ab')
+        lnb_network_ab_uuid_list = find_list(lnb_load, 'network_ab', 'value')
+        if lnb_network_ab == []:
+            lnb_network_ab = ""
+        else:
+            lnb_network_ab_name = []
+            for net_u in lnb_network_ab_uuid_list:
+                lnb_network_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/load?uuid=' + str(net_u)
+                lnb_network_load = requests.get(lnb_network_url).json()
+                lnb_network_ab_name.append(lnb_network_load['entries'][0]['text'])
+            lnb_network_ab = '  &  '.join(str(s) for s in lnb_network_ab_name)
+        lnb_network_ba = find_param(lnb_load, 'network_ba')
+        lnb_network_ba_uuid_list = find_list(lnb_load, 'network_ba', 'value')
+        if lnb_network_ba == []:
+            lnb_network_ba = ""
+        else:
+            lnb_network_ba_name = []
+            for net_u in lnb_network_ba_uuid_list:
+                lnb_network_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/load?uuid=' + str(net_u)
+                lnb_network_load = requests.get(lnb_network_url).json()
+                lnb_network_ba_name.append(lnb_network_load['entries'][0]['text'])
+            lnb_network_ba = '  &  '.join(str(s) for s in lnb_network_ba_name)
+        lnb_network_bb = find_param(lnb_load, 'network_bb')
+        lnb_network_bb_uuid_list = find_list(lnb_load, 'network_bb', 'value')
+        if lnb_network_bb == []:
+            lnb_network_bb = ""
+        else:
+            lnb_network_bb_name = []
+            for net_u in lnb_network_bb_uuid_list:
+                lnb_network_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/load?uuid=' + str(net_u)
+                lnb_network_load = requests.get(lnb_network_url).json()
+                lnb_network_bb_name.append(lnb_network_load['entries'][0]['text'])
+            lnb_network_bb = '  &  '.join(str(s) for s in lnb_network_bb_name)
+        lnb_info_list = ["Name: " + str(lnb_name), "Tune before DiseqC: " + str(lnb_early_tune), "DiseqC repeats: " + str(lnb_diseqc_repeats), "Full DiseqC: " + str(lnb_diseqc_full), "Turn off LNB when idle: " + str(lnb_poweroff), "Network AA: " + str(lnb_network_aa), "Network AB: " + str(lnb_network_ab), "Network BA: " + str(lnb_network_ba), "Network BB: " + str(lnb_network_bb)]
+        lnb_4port_param_edit(lnb_uuid, lnb_info_list, lnb_name, lnb_early_tune, lnb_diseqc_repeats, lnb_diseqc_full, lnb_poweroff, lnb_network_aa, lnb_network_aa_uuid_list, lnb_network_ab, lnb_network_ab_uuid_list, lnb_network_ba, lnb_network_ba_uuid_list, lnb_network_bb, lnb_network_bb_uuid_list, adapter_uuid_sel)
+
+def lnb_only_param_edit(lnb_uuid, lnb_info_list, lnb_name, lnb_early_tune, lnb_diseqc_repeats, lnb_diseqc_full, lnb_poweroff, lnb_network, lnb_network_uuid_list, adapter_uuid_sel):
+    sel_param = dialog.select('LNB Configuration - Select parameter to edit', list=lnb_info_list)
+    if sel_param < 0:
+        adapt_param_load(adapter_uuid_sel)
+    if sel_param >= 0:
+        truefalse = ['true', 'false']
+        enabledisable = ['Enabled', 'Disabled']
+        param_update = ""
+        if sel_param == 1:
+            sel_lnb_early_tune = dialog.select('Enable or disable tune before DiseqC', list=enabledisable)
+            if sel_lnb_early_tune >= 0:
+                lnb_early_tune_sel = truefalse[sel_lnb_early_tune]
+                param_update = '"early_tune":' + lnb_early_tune_sel
+        if sel_param == 2:
+            sel_lnb_diseqc_repeats = dialog.input('Select the number of repeats for the DiseqC commands', defaultt=str(lnb_diseqc_repeats),type=xbmcgui.INPUT_NUMERIC)
+            if sel_lnb_diseqc_repeats == "":
+                sel_lnb_diseqc_repeats = lnb_diseqc_repeats
+            param_update = '"diseqc_repeat":"' + str(sel_lnb_diseqc_repeats) + '"'
+        if sel_param == 3:
+            sel_lnb_diseqc_full = dialog.select('Enable or disable to always send the whole DiseqC sequence', list=enabledisable)
+            if sel_lnb_diseqc_full >= 0:
+                lnb_diseqc_full_sel = truefalse[sel_lnb_diseqc_full]
+                param_update = '"diseqc_full":' + lnb_diseqc_full_sel
+        if sel_param == 4:
+            sel_lnb_poweroff = dialog.select('Enable or disable turn off LNB when idle', list=enabledisable)
+            if sel_lnb_poweroff >= 0:
+                lnb_poweroff_sel = truefalse[sel_lnb_poweroff]
+                param_update = '"lnb_poweroff":' + lnb_poweroff_sel
+        if sel_param == 5:
+            networks_url = 'http://' + tvh_url + ':' + tvh_port + '/api/mpegts/input/network_list?uuid=' + adapter_uuid_sel
+            networks = requests.get(networks_url).json()
+            net_uuid = []
+            if networks['entries'] == []:
+                if dialog.yesno("No Networks found!", "", "Would you like to setup a new Network?"):
+                    net_uuid_sel = network_new()
+                    param_update = '"networks":["' + net_uuid_sel + '"]'
+            else:
+                net_key = []
+                net_val = []
+                net_dict = networks['entries']
+                for net_k in net_dict:
+                    net_key.append(net_k['key'])
+                for net_v in net_dict:
+                    net_val.append(net_v['val'])
+                net_preselect = [i for i, item in enumerate(net_key) if item in set(lnb_network_uuid_list)]
+                sel_network = dialog.multiselect('Select which networks to assign to this adapter', options=net_val, preselect=net_preselect)
+                if sel_network == [] or sel_network == None:
+                    lnb_param_load(adapter_uuid_sel)
+                else:
+                    for sel in sel_network:
+                        net_uuid.append(net_key[sel])
+                    net_uuid_sel =  '", "'.join(str(s) for s in net_uuid)
+                    param_update = '"networks":["' + net_uuid_sel + '"]'
+        if param_update != "":
+            param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/save?node={' + param_update + ',"uuid":"' + lnb_uuid + '"}'
+            param_save = requests.get(param_url)
+            lnb_param_load(adapter_uuid_sel)
+
+def lnb_2port_param_edit(lnb_uuid, lnb_info_list, lnb_name, lnb_early_tune, lnb_diseqc_repeats, lnb_diseqc_full, lnb_poweroff, lnb_network_a, lnb_network_a_uuid_list, lnb_network_b, lnb_network_b_uuid_list, adapter_uuid_sel):
+    sel_param = dialog.select('LNB Configuration - Select parameter to edit', list=lnb_info_list)
+    if sel_param < 0:
+        adapt_param_load(adapter_uuid_sel)
+    if sel_param >= 0:
+        truefalse = ['true', 'false']
+        enabledisable = ['Enabled', 'Disabled']
+        param_update = ""
+        if sel_param == 1:
+            sel_lnb_early_tune = dialog.select('Enable or disable tune before DiseqC', list=enabledisable)
+            if sel_lnb_early_tune >= 0:
+                lnb_early_tune_sel = truefalse[sel_lnb_early_tune]
+                param_update = '"early_tune":' + lnb_early_tune_sel
+        if sel_param == 2:
+            sel_lnb_diseqc_repeats = dialog.input('Select the number of repeats for the DiseqC commands', defaultt=str(lnb_diseqc_repeats),type=xbmcgui.INPUT_NUMERIC)
+            if sel_lnb_diseqc_repeats == "":
+                sel_lnb_diseqc_repeats = lnb_diseqc_repeats
+            param_update = '"diseqc_repeat":"' + str(sel_lnb_diseqc_repeats) + '"'
+        if sel_param == 3:
+            sel_lnb_diseqc_full = dialog.select('Enable or disable to always send the whole DiseqC sequence', list=enabledisable)
+            if sel_lnb_diseqc_full >= 0:
+                lnb_diseqc_full_sel = truefalse[sel_lnb_diseqc_full]
+                param_update = '"diseqc_full":' + lnb_diseqc_full_sel
+        if sel_param == 4:
+            sel_lnb_poweroff = dialog.select('Enable or disable turn off LNB when idle', list=enabledisable)
+            if sel_lnb_poweroff >= 0:
+                lnb_poweroff_sel = truefalse[sel_lnb_poweroff]
+                param_update = '"lnb_poweroff":' + lnb_poweroff_sel
+        if sel_param >= 5:
+            networks_url = 'http://' + tvh_url + ':' + tvh_port + '/api/mpegts/input/network_list?uuid=' + adapter_uuid_sel
+            networks = requests.get(networks_url).json()
+            net_uuid = []
+            if networks['entries'] == []:
+                if dialog.yesno("No Networks found!", "", "Would you like to setup a new Network?"):
+                    net_uuid_sel = network_new()
+                    param_update = '"networks":["' + net_uuid_sel + '"]'
+            else:
+                net_key = []
+                net_val = []
+                net_dict = networks['entries']
+                for net_k in net_dict:
+                    net_key.append(net_k['key'])
+                for net_v in net_dict:
+                    net_val.append(net_v['val'])
+                if sel_param == 5:
+                    net_preselect = [i for i, item in enumerate(net_key) if item in set(lnb_network_a_uuid_list)]
+                if sel_param == 6:
+                    net_preselect = [i for i, item in enumerate(net_key) if item in set(lnb_network_b_uuid_list)]
+                sel_network = dialog.multiselect('Select which networks to assign to this adapter', options=net_val, preselect=net_preselect)
+                if sel_network == [] or sel_network == None:
+                    lnb_param_load(adapter_uuid_sel)
+                else:
+                    for sel in sel_network:
+                        net_uuid.append(net_key[sel])
+                    net_uuid_sel =  '", "'.join(str(s) for s in net_uuid)
+                    if sel_param == 5:
+                        lnb_networks = 'network_a'
+                    if sel_param == 6:
+                        lnb_networks = 'network_b'
+                    param_update = '"' + lnb_networks + '":["' + net_uuid_sel + '"]'
+        if param_update != "":
+            param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/save?node={' + param_update + ',"uuid":"' + lnb_uuid + '"}'
+            param_save = requests.get(param_url)
+            lnb_param_load(adapter_uuid_sel)
+
+def lnb_4port_param_edit(lnb_uuid, lnb_info_list, lnb_name, lnb_early_tune, lnb_diseqc_repeats, lnb_diseqc_full, lnb_poweroff, lnb_network_aa, lnb_network_aa_uuid_list, lnb_network_ab, lnb_network_ab_uuid_list, lnb_network_ba, lnb_network_ba_uuid_list, lnb_network_bb, lnb_network_bb_uuid_list, adapter_uuid_sel):
+    sel_param = dialog.select('LNB Configuration - Select parameter to edit', list=lnb_info_list)
+    if sel_param < 0:
+        adapt_param_load(adapter_uuid_sel)
+    if sel_param >= 0:
+        truefalse = ['true', 'false']
+        enabledisable = ['Enabled', 'Disabled']
+        param_update = ""
+        if sel_param == 1:
+            sel_lnb_early_tune = dialog.select('Enable or disable tune before DiseqC', list=enabledisable)
+            if sel_lnb_early_tune >= 0:
+                lnb_early_tune_sel = truefalse[sel_lnb_early_tune]
+                param_update = '"early_tune":' + lnb_early_tune_sel
+        if sel_param == 2:
+            sel_lnb_diseqc_repeats = dialog.input('Select the number of repeats for the DiseqC commands', defaultt=str(lnb_diseqc_repeats),type=xbmcgui.INPUT_NUMERIC)
+            if sel_lnb_diseqc_repeats == "":
+                sel_lnb_diseqc_repeats = lnb_diseqc_repeats
+            param_update = '"diseqc_repeat":"' + str(sel_lnb_diseqc_repeats) + '"'
+        if sel_param == 3:
+            sel_lnb_diseqc_full = dialog.select('Enable or disable to always send the whole DiseqC sequence', list=enabledisable)
+            if sel_lnb_diseqc_full >= 0:
+                lnb_diseqc_full_sel = truefalse[sel_lnb_diseqc_full]
+                param_update = '"diseqc_full":' + lnb_diseqc_full_sel
+        if sel_param == 4:
+            sel_lnb_poweroff = dialog.select('Enable or disable turn off LNB when idle', list=enabledisable)
+            if sel_lnb_poweroff >= 0:
+                lnb_poweroff_sel = truefalse[sel_lnb_poweroff]
+                param_update = '"lnb_poweroff":' + lnb_poweroff_sel
+        if sel_param >= 5:
+            networks_url = 'http://' + tvh_url + ':' + tvh_port + '/api/mpegts/input/network_list?uuid=' + adapter_uuid_sel
+            networks = requests.get(networks_url).json()
+            net_uuid = []
+            if networks['entries'] == []:
+                if dialog.yesno("No Networks found!", "", "Would you like to setup a new Network?"):
+                    net_uuid_sel = network_new()
+                    param_update = '"networks":["' + net_uuid_sel + '"]'
+            else:
+                net_key = []
+                net_val = []
+                net_dict = networks['entries']
+                for net_k in net_dict:
+                    net_key.append(net_k['key'])
+                for net_v in net_dict:
+                    net_val.append(net_v['val'])
+                if sel_param == 5:
+                    net_preselect = [i for i, item in enumerate(net_key) if item in set(lnb_network_aa_uuid_list)]
+                if sel_param == 6:
+                    net_preselect = [i for i, item in enumerate(net_key) if item in set(lnb_network_ab_uuid_list)]
+                if sel_param == 7:
+                    net_preselect = [i for i, item in enumerate(net_key) if item in set(lnb_network_ba_uuid_list)]
+                if sel_param == 8:
+                    net_preselect = [i for i, item in enumerate(net_key) if item in set(lnb_network_bb_uuid_list)]
+                sel_network = dialog.multiselect('Select which networks to assign to this adapter', options=net_val, preselect=net_preselect)
+                if sel_network == [] or sel_network == None:
+                    lnb_param_load(adapter_uuid_sel)
+                else:
+                    for sel in sel_network:
+                        net_uuid.append(net_key[sel])
+                    net_uuid_sel =  '", "'.join(str(s) for s in net_uuid)
+                    if sel_param == 5:
+                        lnb_networks = 'network_aa'
+                    if sel_param == 6:
+                        lnb_networks = 'network_ab'
+                    if sel_param == 7:
+                        lnb_networks = 'network_ba'
+                    if sel_param == 8:
+                        lnb_networks = 'network_bb'
+                    param_update = '"' + lnb_networks + '":["' + net_uuid_sel + '"]'
+        if param_update != "":
+            param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/save?node={' + param_update + ',"uuid":"' + lnb_uuid + '"}'
+            param_save = requests.get(param_url)
+            lnb_param_load(adapter_uuid_sel)
+
+def adapt_param_dvbsedit(adapter_uuid_sel, adapt_info_list, adapt_enabled, adapt_name, adapt_priority, adapt_otaepg, adapt_init, adapt_idle, adapt_satconf, adapt_satconf_key, adapt_satconf_val):
+    sel_param = dialog.select('Adapters Configuration - Select parameter to edit', list=adapt_info_list)
+    if sel_param < 0:
+        adapters()
+    if sel_param >= 0:
+        truefalse = ['true', 'false']
+        enabledisable = ['Enabled', 'Disabled']
+        param_update = ""
+        if sel_param == 0:
+            sel_adapt_name = dialog.input('Edit the adapter name', defaultt=adapt_name,type=xbmcgui.INPUT_ALPHANUM)
+            if sel_adapt_name == "":
+                sel_adapt_name = adapt_name
+            param_update = '"displayname":"' + sel_adapt_name + '"'
+        if sel_param == 1:
+            sel_adapt_enabled = dialog.select('Enable or disable the adapter', list=enabledisable)
+            if sel_adapt_enabled >= 0:
+                adapt_enabled = truefalse[sel_adapt_enabled]
+                param_update = '"enabled":' + adapt_enabled
+        if sel_param == 2:
+            sel_adapt_satconf = dialog.select('Select the satellite configuration to use', list=adapt_satconf_val)
+            if sel_adapt_satconf >= 0:
+                adapt_satconf_sel = adapt_satconf_key[sel_adapt_satconf]
+                param_update = '"satconf":"' + str(adapt_satconf_sel) + '"'
+        if sel_param == 3:
+            lnb_param_load(adapter_uuid_sel)
+        if sel_param == 4:
+            sel_adapt_priority = dialog.input('Edit the adapter priority (higher used first)', defaultt=str(adapt_priority),type=xbmcgui.INPUT_NUMERIC)
+            if sel_adapt_priority == "":
+                sel_adapt_priority = adapt_priority
+            param_update = '"priority":"' + str(sel_adapt_priority) + '"'
+        if sel_param == 5:
+            sel_adapt_otaepg = dialog.select('Enable or disable OTA EPG scanning', list=enabledisable)
+            if sel_adapt_otaepg >= 0:
+                adapt_otaepg = truefalse[sel_adapt_otaepg]
+                param_update = '"ota_epg":' + adapt_otaepg
+        if sel_param == 6:
+            sel_adapt_init = dialog.select('Enable or disable initial startup scanning', list=enabledisable)
+            if sel_adapt_init >= 0:
+                adapt_init = truefalse[sel_adapt_init]
+                param_update = '"initscan":' + adapt_init
+        if sel_param == 7:
+            sel_adapt_idle = dialog.select('Enable or disable idle scanning', list=enabledisable)
+            if sel_adapt_idle >= 0:
+                adapt_idle = truefalse[sel_adapt_idle]
+                param_update = '"idlescan":' + adapt_idle
+        if param_update != "":
+            param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/save?node={' + param_update + ',"uuid":"' + adapter_uuid_sel + '"}'
+            param_save = requests.get(param_url)
+            adapt_param_load(adapter_uuid_sel)
 
 def adapt_param_edit(adapter_uuid_sel, adapt_info_list, adapt_enabled, adapt_name, adapt_network, adapt_network_uuid_list, adapt_priority, adapt_otaepg, adapt_init, adapt_idle):
     sel_param = dialog.select('Adapters Configuration - Select parameter to edit', list=adapt_info_list)
@@ -1440,6 +1821,109 @@ def adapt_param_edit(adapter_uuid_sel, adapt_info_list, adapt_enabled, adapt_nam
             param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/save?node={' + param_update + ',"uuid":"' + adapter_uuid_sel + '"}'
             param_save = requests.get(param_url)
             adapt_param_load(adapter_uuid_sel)
+
+def cas_param_load(cas_uuid_sel):
+    cas_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/load?uuid=' + str(cas_uuid_sel)
+    cas_load = requests.get(cas_url).json()
+    cas_param_list = []
+    cas_param_list_id = []
+    for param in cas_load['entries'][0]['params']:
+        cas_label = param['caption']
+        cas_id = param['id']
+        cas_param_enum = find_param_item(cas_load, cas_id, 'enum')
+        cas_type = param['type']
+        if cas_param_enum == "NO PARAMATER FOUND" or cas_param_enum == '':
+            try:
+                if cas_type == 'u16' or cas_type == 'u32':
+                    cas_value = hex(param['value'])
+                else:
+                    cas_value = param['value']
+            except:
+                cas_value = ''
+        else:
+            cas_value, cas_k, cas_v = find_param_dict(cas_load, cas_id, 'enum')
+        try:
+            cas_hidden = param['hidden']
+        except:
+            cas_hidden = 'false'
+        if cas_hidden == 'false':
+            param_list_add = cas_label + ': ' + str(cas_value)
+            cas_param_list.append(param_list_add)
+            cas_param_list_id.append(cas_id)
+    sel_param = dialog.select('CA Configuration - Select parameter to edit', list=cas_param_list)
+    if sel_param >= 0:
+        cas_param_sel = cas_param_list_id[sel_param]
+        cas_param_type = find_param_item(cas_load, cas_param_sel, 'type')
+        cas_param_desc = find_param_item(cas_load, cas_param_sel, 'description')
+        cas_param_value = find_param_item(cas_load, cas_param_sel, 'value')
+        if cas_param_type == 'bool':
+            sel_param_edit = dialog.select(cas_param_desc, list=enabledisable)
+            if sel_param_edit >= 0:
+                param_edit_sel = truefalse[sel_param_edit]
+                param_update = '"' + cas_param_sel + '":' + param_edit_sel
+        if cas_param_type == 'int':
+            cas_param_enum = find_param_item(cas_load, cas_param_sel, 'enum')
+            if cas_param_enum == '':
+                sel_param_edit = dialog.input(cas_param_desc, defaultt=str(cas_param_value),type=xbmcgui.INPUT_NUMERIC)
+                if sel_param_edit >= 0:
+                    param_update = '"' + cas_param_sel + '":"' + str(sel_param_edit) + '"'
+            else:
+                cas_param_value, cas_param_enum_key, cas_param_enum_value = find_param_dict(cas_load, cas_param_sel, 'enum')
+                sel_param_edit = dialog.select(cas_param_desc, list=cas_param_enum_value)
+                if sel_param_edit <0:
+                    return
+                if sel_param_edit >= 0:
+                    param_edit_sel = cas_param_enum_key[sel_param_edit]
+                    param_update = '"' + cas_param_sel + '":"' + str(param_edit_sel) + '"'
+        if cas_param_type == 'str':
+            sel_param_edit = dialog.input(cas_param_desc, defaultt=str(cas_param_value),type=xbmcgui.INPUT_ALPHANUM)
+            if sel_param_edit == '':
+                param_update = ""
+            else:
+                param_update = '"' + cas_param_sel + '":"' + sel_param_edit + '"'
+        if cas_param_type == 'u16' or cas_param_type == 'u32':
+            sel_param_edit = dialog.input(cas_param_desc, defaultt=hex(cas_param_value),type=xbmcgui.INPUT_ALPHANUM)
+            if sel_param_edit == '':
+                param_update = ""
+            else:
+                sel_param_edit_hex = int(sel_param_edit, 0)
+                param_update = '"' + cas_param_sel + '":"' + str(sel_param_edit_hex) + '"'
+        if param_update != "":
+            param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/save?node={' + param_update + ',"uuid":"' + cas_uuid_sel + '"}'
+            param_save = requests.get(param_url)
+        cas_param_load(cas_uuid_sel)
+
+def cas_new():
+    cas_new_url = 'http://' + tvh_url + ':' + tvh_port + '/api/caclient/builders'
+    cas_new_load = requests.get(cas_new_url).json()
+    cas_new_list = []
+    for cas in cas_new_load['entries']:
+        cas_new_list.append(cas['caption'])
+    sel_cas_new = dialog.select('Select a conditional access client type', list=cas_new_list)
+    if sel_cas_new >= 0:
+        cas_conf_dict = {}
+        cas_new_class = cas_new_load['entries'][sel_cas_new]['class']
+        for prop in cas_new_load['entries'][sel_cas_new]['props']:
+            cas_new_id = prop['id']
+            if cas_new_id != 'name':
+                cas_new_default = prop['default']
+                try:
+                    cas_new_hidden = prop['hidden']
+                except:
+                    cas_new_hidden = 'false'
+                if cas_new_hidden == 'false':
+                    cas_conf_dict[cas_new_id] = cas_new_default
+        cas_new_name = dialog.input('Name of the CA Client', type=xbmcgui.INPUT_ALPHANUM)
+        if cas_new_name != '':
+            cas_conf_dict['name'] = cas_new_name
+        else:
+            dialog.ok('Client Name Required!', 'You must enter a client name to create a new conditional access client.')
+            cas_new()
+        cas_conf = json.dumps(cas_conf_dict)
+        cas_create_url =  'http://' + tvh_url + ':' + tvh_port + '/api/caclient/create?class=' + cas_new_class + '&conf=' + cas_conf
+        cas_create_load = requests.get(cas_create_url).json()
+        cas_new_uuid = cas_create_load['uuid']
+        return (cas_new_uuid)
 
 def network_new():
     net_type_name = ["ATSC-T","ATSC-C","DVB-S","DVB-C","DVB-T","IPTV Automatic","IPTV Network","ISDB-S","ISDB-C","ISDB-T"]
@@ -1510,6 +1994,20 @@ def net_param_load(net_uuid_sel):
     netiptv_url = find_param(net_load, 'url')
     netiptv_channel_number = find_param(net_load, 'channel_number')
     netiptv_tsid_zero = find_param(net_load, 'tsid_zero')
+    net_discovery = find_param(net_load, 'autodiscovery')
+    net_discovery_list = ['Disable', 'New muxes only', 'New muxes + changed muxes']
+    net_orbital = find_param(net_load, 'orbital_pos')
+    if net_class == 'dvb_network_dvbs':
+        net_orbital_url = 'http://' + tvh_url + ':' + tvh_port + '/api/dvb/orbitalpos/list'
+        net_orbital_load = requests.get(net_orbital_url).json()
+        net_orbital_fulllist = net_orbital_load['entries']
+        net_orbital_dict = {}
+        net_orbital_list = []
+        for item in net_orbital_fulllist:
+            short = item['key']
+            net_orbital_dict[short] = item['val']
+            net_orbital_list.append(item['val'])
+        net_orbital_long = net_orbital_dict.get(net_orbital)
     if net_num_svc == 0 and net_num_mux == 0:
         net_num_svc_disp = "0 - add muxes before scanning for services"
     elif net_num_mux != 0 and net_num_svc == 0:
@@ -1524,16 +2022,19 @@ def net_param_load(net_uuid_sel):
     else:
         net_num_mux_disp = net_num_mux
     if net_class == "iptv_auto_network":
-        net_info_list = ["Name: " + net_name, "Create bouquet: " + str(net_bouquet), "URL: " + netiptv_url, "Max number of input streams: " + str(netiptv_max_streams), "Max bandwidth (Kbps): " + str(netiptv_max_bandwidth), "Channel numbers from: " + str(netiptv_channel_number), "Accept zero value for TSID: " + str(netiptv_tsid_zero), "Number of muxes: " + str(net_num_mux_disp), "Number of services: " + str(net_num_svc_disp), "Number of channels: " + str(net_num_ch), "DELETE THE NETWORK"]
+        net_info_list = ["Name: " + net_name, "Create bouquet: " + str(net_bouquet), "URL: " + netiptv_url, "Max number of input streams: " + str(netiptv_max_streams), "Max bandwidth (Kbps): " + str(netiptv_max_bandwidth), "Channel numbers from: " + str(netiptv_channel_number), "Accept zero value for TSID: " + str(netiptv_tsid_zero), "Number of channels: " + str(net_num_ch), "Number of muxes: " + str(net_num_mux_disp), "Number of services: " + str(net_num_svc_disp), "DELETE THE NETWORK"]
         netiptvauto_param_edit(net_uuid_sel, net_info_list, net_name, net_bouquet, net_type, net_num_mux, net_num_svc, net_num_ch, netiptv_url, netiptv_max_streams, netiptv_max_bandwidth, netiptv_channel_number, netiptv_tsid_zero)
     elif net_class == "iptv_network":
         net_info_list = ["Name: " + net_name, "Create bouquet: " + str(net_bouquet), "Max number of input streams: " + str(netiptv_max_streams), "Max bandwidth (Kbps): " + str(netiptv_max_bandwidth), "Number of muxes: " + str(net_num_mux_disp), "Number of services: " + str(net_num_svc_disp), "Number of channels: " + str(net_num_ch), "DELETE THE NETWORK"]
         netiptv_param_edit(net_uuid_sel, net_info_list, net_name, net_bouquet, net_type, net_num_mux, net_num_svc, net_num_ch, netiptv_max_streams, netiptv_max_bandwidth)
+    elif net_class == 'dvb_network_dvbs':
+        net_info_list = ["Name: " + net_name, "Create bouquet: " + str(net_bouquet), "Orbital position: " + str(net_orbital_long), "Network discovery: " + net_discovery_list[net_discovery], "Number of muxes: " + str(net_num_mux_disp), "Number of services: " + str(net_num_svc_disp), "Number of channels: " + str(net_num_ch), "DELETE THE NETWORK"]
+        netdvbs_param_edit(net_uuid_sel, net_info_list, net_name, net_bouquet, net_type, net_num_mux, net_num_svc, net_num_ch, net_discovery, net_discovery_list, net_orbital, net_orbital_list)
     else:
-        net_info_list = ["Name: " + net_name, "Create bouquet: " + str(net_bouquet), "Number of muxes: " + str(net_num_mux_disp), "Number of services: " + str(net_num_svc_disp), "Number of channels: " + str(net_num_ch), "DELETE THE NETWORK"]
-        net_param_edit(net_uuid_sel, net_info_list, net_name, net_bouquet, net_type, net_num_mux, net_num_svc, net_num_ch)
+        net_info_list = ["Name: " + net_name, "Create bouquet: " + str(net_bouquet), "Network discovery: " + net_discovery_list[net_discovery], "Number of muxes: " + str(net_num_mux_disp), "Number of services: " + str(net_num_svc_disp), "Number of channels: " + str(net_num_ch), "DELETE THE NETWORK"]
+        net_param_edit(net_uuid_sel, net_info_list, net_name, net_bouquet, net_type, net_num_mux, net_num_svc, net_num_ch, net_discovery, net_discovery_list)
 
-def net_param_edit(net_uuid_sel, net_info_list, net_name, net_bouquet, net_type, net_num_mux, net_num_svc, net_num_ch):
+def netdvbs_param_edit(net_uuid_sel, net_info_list, net_name, net_bouquet, net_type, net_num_mux, net_num_svc, net_num_ch, net_discovery, net_discovery_list, net_orbital, net_orbital_list):
     sel_param = dialog.select('Network Configuration - Select parameter to edit', list=net_info_list)
     if sel_param < 0:
         networks()
@@ -1549,9 +2050,19 @@ def net_param_edit(net_uuid_sel, net_info_list, net_name, net_bouquet, net_type,
             if sel_net_bouquet >= 0:
                 net_bouquet_enabled = truefalse[sel_net_bouquet]
                 param_update = '"bouquet":' + net_bouquet_enabled
-        if sel_param == 2 and net_num_mux != 0:
+        if sel_param == 2:
+            sel_net_orbital = dialog.select('Select the orbital position of the satellite for your dish', list=net_orbital_list)
+            if sel_net_orbital >= 0:
+                net_orbital_sel = net_orbital_list[sel_net_orbital]
+                net_orbital_sel_short = net_orbital_sel.split(' ')[0]
+                param_update = '"orbital_pos":"' + net_orbital_sel_short + '"'
+        if sel_param == 3:
+            sel_net_discovery = dialog.select('Select the type of network discovery for muxes', list=net_discovery_list)
+            if sel_net_discovery >= 0:
+                param_update = '"autodiscovery":' + str(sel_net_discovery)
+        if sel_param == 4 and net_num_mux != 0:
             muxes_load(net_uuid_sel)
-        if sel_param == 2 and net_num_mux == 0:
+        if sel_param == 4 and net_num_mux == 0:
             dvb_list_url = 'http://' + tvh_url + ':' + tvh_port + '/api/dvb/scanfile/list?type=' + net_type
             dvb_list = requests.get(dvb_list_url).json()
             scan_key = []
@@ -1563,25 +2074,89 @@ def net_param_edit(net_uuid_sel, net_info_list, net_name, net_bouquet, net_type,
             sel_scan = dialog.select('Select a pre-defined mux list for the ' + net_name + " network", list=scan_val)
             scan_val_sel = scan_key[sel_scan]
             param_update = '"scanfile":"' + scan_val_sel + '"'
-        if sel_param == 3 and net_num_mux != 0 and net_num_svc != 0:
+        if sel_param == 5 and net_num_mux != 0 and net_num_svc != 0:
             if dialog.yesno(str(net_num_svc) + " services found!", "Would you like to scan muxes for new services?"):
                 start_scan(net_uuid_sel)
-        if sel_param == 3 and net_num_mux == 0:
+        if sel_param == 5 and net_num_mux == 0:
             dialog.ok("No services found!", "Add muxes before scanning for services.")
-        if sel_param == 3 and net_num_mux != 0 and net_num_svc == 0:
+        if sel_param == 5 and net_num_mux != 0 and net_num_svc == 0:
             if dialog.yesno("No services found!", "Would you like to scan muxes for new services?"):
                 start_scan(net_uuid_sel)
-        if sel_param == 4 and net_num_svc != 0 and net_num_ch == 0:
+        if sel_param == 6 and net_num_svc != 0 and net_num_ch == 0:
             if dialog.yesno(str(net_num_svc) + " services found!", "Would you like to map services to channels?"):
                 services()
-        if sel_param == 4 and net_num_svc != 0 and net_num_ch != 0:
+        if sel_param == 6 and net_num_svc != 0 and net_num_ch != 0:
             channels()
-        if sel_param == 4 and net_num_svc == 0 and net_num_mux != 0:
+        if sel_param == 6 and net_num_svc == 0 and net_num_mux != 0:
             if dialog.yesno("No services found!", "Would you like to scan muxes for new services?"):
                 start_scan(net_uuid_sel)
-        if sel_param == 4 and net_num_mux == 0:
+        if sel_param == 6 and net_num_mux == 0:
             dialog.ok("No muxes found!", "Add muxes before scanning for services and mapping channels.")
-        if sel_param == 5:
+        if sel_param == 7:
+            confirm_del = dialog.yesno('Confirm delete network', 'Are you sure want to delete the ' + net_name + ' network?')
+            if not confirm_del:
+                return
+            delete_net_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/delete?uuid=["' + net_uuid_sel +'"]'
+            delete_net = requests.get(delete_net_url)
+            networks()
+        if param_update != "":
+            param_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/save?node={' + param_update + ',"uuid":"' + net_uuid_sel + '"}'
+            param_save = requests.get(param_url)
+            net_param_load(net_uuid_sel)
+
+def net_param_edit(net_uuid_sel, net_info_list, net_name, net_bouquet, net_type, net_num_mux, net_num_svc, net_num_ch, net_discovery, net_discovery_list):
+    sel_param = dialog.select('Network Configuration - Select parameter to edit', list=net_info_list)
+    if sel_param < 0:
+        networks()
+    if sel_param >= 0:
+        param_update = ""
+        if sel_param == 0:
+            sel_net_name = dialog.input('Edit the network name', defaultt=net_name,type=xbmcgui.INPUT_ALPHANUM)
+            if sel_net_name == "":
+                sel_net_name = net_name
+            param_update = '"networkname":"' + sel_net_name + '"'
+        if sel_param == 1:
+            sel_net_bouquet = dialog.select('Enable or disable to automatically create a bouquet from all services', list=enabledisable)
+            if sel_net_bouquet >= 0:
+                net_bouquet_enabled = truefalse[sel_net_bouquet]
+                param_update = '"bouquet":' + net_bouquet_enabled
+        if sel_param == 2:
+            sel_net_discovery = dialog.select('Select the type of network discovery for muxes', list=net_discovery_list)
+            if sel_net_discovery >= 0:
+                param_update = '"autodiscovery":' + str(sel_net_discovery)
+        if sel_param == 3 and net_num_mux != 0:
+            muxes_load(net_uuid_sel)
+        if sel_param == 3 and net_num_mux == 0:
+            dvb_list_url = 'http://' + tvh_url + ':' + tvh_port + '/api/dvb/scanfile/list?type=' + net_type
+            dvb_list = requests.get(dvb_list_url).json()
+            scan_key = []
+            scan_val = []
+            for scan_k in dvb_list['entries']:
+                scan_key.append(scan_k['key'])
+            for scan_v in dvb_list['entries']:
+                scan_val.append(scan_v['val'])
+            sel_scan = dialog.select('Select a pre-defined mux list for the ' + net_name + " network", list=scan_val)
+            scan_val_sel = scan_key[sel_scan]
+            param_update = '"scanfile":"' + scan_val_sel + '"'
+        if sel_param == 4 and net_num_mux != 0 and net_num_svc != 0:
+            if dialog.yesno(str(net_num_svc) + " services found!", "Would you like to scan muxes for new services?"):
+                start_scan(net_uuid_sel)
+        if sel_param == 4 and net_num_mux == 0:
+            dialog.ok("No services found!", "Add muxes before scanning for services.")
+        if sel_param == 4 and net_num_mux != 0 and net_num_svc == 0:
+            if dialog.yesno("No services found!", "Would you like to scan muxes for new services?"):
+                start_scan(net_uuid_sel)
+        if sel_param == 5 and net_num_svc != 0 and net_num_ch == 0:
+            if dialog.yesno(str(net_num_svc) + " services found!", "Would you like to map services to channels?"):
+                services()
+        if sel_param == 5 and net_num_svc != 0 and net_num_ch != 0:
+            channels()
+        if sel_param == 5 and net_num_svc == 0 and net_num_mux != 0:
+            if dialog.yesno("No services found!", "Would you like to scan muxes for new services?"):
+                start_scan(net_uuid_sel)
+        if sel_param == 5 and net_num_mux == 0:
+            dialog.ok("No muxes found!", "Add muxes before scanning for services and mapping channels.")
+        if sel_param == 6:
             confirm_del = dialog.yesno('Confirm delete network', 'Are you sure want to delete the ' + net_name + ' network?')
             if not confirm_del:
                 return
@@ -2033,7 +2608,6 @@ def services():
         map_total_perc = ((float(map_complete) / float(serv_total)) * 100)
         dialog.ok("Channel mapping complete.", str(map_ok_num) + " new channels added.", str(map_ignore_num) + " services ignored.", str(map_fail_num) + " services failed.")
 
-
 @plugin.route('/channels')
 def channels():
     channels_url = 'http://' + tvh_url + ':' + tvh_port + '/api/channel/grid?all=1&limit=999999999&sort=name'
@@ -2072,6 +2646,27 @@ def dvr():
     if sel_dvr >= 0:
         dvr_uuid_sel = dvr_config_uuid[sel_dvr]
         dvr_param_load(dvr_uuid_sel)
+
+@plugin.route('/cas')
+def cas():
+    cas_url = 'http://' + tvh_url + ':' + tvh_port + '/api/caclient/list'
+    cas = requests.get(cas_url).json()
+    cas_name = ["Setup New Conditional Access Entry"]
+    cas_uuid = [0]
+    for cas_n in cas['entries']:
+        cas_name.append(cas_n['title'])
+    for cas_u in cas['entries']:
+        cas_uuid.append(cas_u['uuid'])
+    sel_cas = dialog.select('Select a conditional access client to configure', list=cas_name)
+    if sel_cas == 0:
+        cas_uuid_sel = cas_new()
+        if cas_uuid_sel == "":
+            return
+        else:
+            cas_param_load(cas_uuid_sel)
+    if sel_cas > 0:
+        cas_uuid_sel = cas_uuid[sel_cas]
+        cas_param_load(cas_uuid_sel)
 
 @plugin.route('/epg')
 def epg():
@@ -2282,7 +2877,6 @@ def tvh():
         param_save = requests.get(param_url)
         tvh()
 
-
 @plugin.route('/tvhclient')
 def tvhclient():
     plugin.open_settings()
@@ -2338,6 +2932,12 @@ def index():
         'label': 'DVR Configuration',
         'path': plugin.url_for(u'dvr'),
         'thumbnail':get_icon_path('dvr'),
+    })
+    items.append(
+    {
+        'label': 'Conditional Access Clients',
+        'path': plugin.url_for(u'cas'),
+        'thumbnail':get_icon_path('cas'),
     })
     items.append(
     {
