@@ -1825,8 +1825,8 @@ def adapt_param_edit(adapter_uuid_sel, adapt_info_list, adapt_enabled, adapt_nam
 def cas_param_load(cas_uuid_sel):
     cas_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/load?uuid=' + str(cas_uuid_sel)
     cas_load = requests.get(cas_url).json()
-    cas_param_list = []
-    cas_param_list_id = []
+    cas_param_list = ['DELETE CONDITIONAL ACCESS CLIENT']
+    cas_param_list_id = ['']
     for param in cas_load['entries'][0]['params']:
         cas_label = param['caption']
         cas_id = param['id']
@@ -1850,8 +1850,17 @@ def cas_param_load(cas_uuid_sel):
             param_list_add = cas_label + ': ' + str(cas_value)
             cas_param_list.append(param_list_add)
             cas_param_list_id.append(cas_id)
-    sel_param = dialog.select('CA Configuration - Select parameter to edit', list=cas_param_list)
-    if sel_param >= 0:
+    sel_param_title = cas_label + ' Client Configuration - Select parameter to edit'
+    sel_param = dialog.select(sel_param_title, list=cas_param_list)
+    if sel_param == 0:
+        confirm_del = dialog.yesno('Confirm delete CA client', 'Are you sure want to delete the ' + cas_label + ' client?')
+        if not confirm_del:
+            cas_param_load(cas_uuid_sel)
+        else:
+            delete_cas_url = 'http://' + tvh_url + ':' + tvh_port + '/api/idnode/delete?uuid=["' + cas_uuid_sel +'"]'
+            delete_cas = requests.get(delete_cas_url)
+            cas()
+    if sel_param > 0:
         cas_param_sel = cas_param_list_id[sel_param]
         cas_param_type = find_param_item(cas_load, cas_param_sel, 'type')
         cas_param_desc = find_param_item(cas_load, cas_param_sel, 'description')
@@ -2651,7 +2660,7 @@ def dvr():
 def cas():
     cas_url = 'http://' + tvh_url + ':' + tvh_port + '/api/caclient/list'
     cas = requests.get(cas_url).json()
-    cas_name = ["Setup New Conditional Access Entry"]
+    cas_name = ["Setup New Conditional Access Client"]
     cas_uuid = [0]
     for cas_n in cas['entries']:
         cas_name.append(cas_n['title'])
