@@ -1,3 +1,6 @@
+v2.1 (2018-01-04)
+ - add support for mapping selected services to channels
+
 v2.0 (2018-01-03)
  - add support for DVB-S adapter and LNB configuration
  - add support for Conditional Access Clients

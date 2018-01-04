@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addon id="script.module.tvh2kodi"
        name="Tvheadend Setup for Kodi"
-       version="2.0"
+       version="2.1"
        provider-name="edit4ever">
   <requires>
     <import addon="xbmc.python" version="2.6.0"/>
@@ -30,7 +30,7 @@
         <screenshot>resources/screenshot-03.jpg</screenshot>
     </assets>
     <news>
-  2.0 - add support for DVB-S adapter and LNB configuration | adds CA client support
+  2.1 - add support for mapping selected services to channels
     </news>
   </extension>
 </addon>

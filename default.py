@@ -2314,6 +2314,118 @@ def netiptv_param_edit(net_uuid_sel, net_info_list, net_name, net_bouquet, net_t
             param_save = requests.get(param_url)
             net_param_load(net_uuid_sel)
 
+def services_param_load():
+    services_url = 'http://' + tvh_url + ':' + tvh_port + '/api/service/mapper/load'
+    services_load = requests.get(services_url).json()
+    services_opt_name = ['MAP ALL SERVICES TO CHANNELS', 'MAP SELECTED SERVICES TO CHANNELS']
+    services_opt_id = ['','']
+    services_opt_label = ['','']
+    services_node = {}
+    for param in services_load['entries'][0]['params']:
+        serv_id = param['id']
+        if serv_id != 'services':
+            services_opt_id.append(serv_id)
+            serv_label = param['caption']
+            services_opt_label.append(serv_label)
+            serv_value_orig = param['value']
+            if serv_value_orig == True:
+                serv_value = 'Enabled'
+            else:
+                serv_value = 'Disabled'
+            serv_list_add = serv_label + ': ' + serv_value
+            services_opt_name.append(serv_list_add)
+            services_node[serv_id] = serv_value_orig
+    services_param_edit(services_opt_name, services_opt_id, services_opt_label, services_node)
+
+def services_param_edit(services_opt_name, services_opt_id, services_opt_label, services_node):
+    sel_param = dialog.select('Edit Options or Select to Map Services', list=services_opt_name)
+    if sel_param == 0:
+        if dialog.yesno("Map ALL Services to Channels", "Are you sure you want to map all services to channels?"):
+            serv_url = 'http://' + tvh_url + ':' + tvh_port + '/api/mpegts/service/grid?limit=999999999&sort=multiplex'
+            services = requests.get(serv_url).json()
+            serv_total = services['total']
+            serv_uuid = []
+            for serv_id in services['entries']:
+                if serv_id['channel'] == []:
+                    serv_uuid.append(serv_id['uuid'])
+            serv_uuid_str = str(serv_uuid)
+            serv_uuid_str = re.sub("u\'","\"",serv_uuid_str)
+            serv_uuid_str = re.sub("\'","\"",serv_uuid_str)
+            serv_node_str = json.dumps(services_node)
+            serv_node_str = re.sub('{','',serv_node_str)
+            map_url = 'http://' + tvh_url + ':' + tvh_port + '/api/service/mapper/save?node={"services":' + serv_uuid_str + ',' + serv_node_str
+            map_ch =  requests.get(map_url)
+            status_url = 'http://' + tvh_url + ':' + tvh_port + '/api/service/mapper/status'
+            time.sleep(3)
+            map_status = requests.get(status_url).json()
+            map_total_num = map_status['total']
+            map_ok_num = map_status['ok']
+            map_fail_num = map_status['fail']
+            map_ignore_num = map_status['ignore']
+            map_complete = (map_ok_num + map_fail_num + map_ignore_num)
+            map_total_perc = ((float(map_complete) / float(serv_total)) * 100)
+            dialog.ok("Channel mapping complete.", str(map_ok_num) + " new channels added.", str(map_ignore_num) + " services ignored.", str(map_fail_num) + " services failed.")
+    if sel_param == 1:
+        serv_url = 'http://' + tvh_url + ':' + tvh_port + '/api/mpegts/service/grid?limit=999999999&sort=multiplex'
+        services = requests.get(serv_url).json()
+        serv_total = services['total']
+        services_uuid = []
+        services_list = []
+        services_chan = []
+        services_sel = []
+        for serv in services['entries']:
+            try:
+                serv_name = serv['svcname']
+            except:
+                serv_name = 'NO SERVICE NAME'
+            serv_uuid = serv['uuid']
+            serv_multiplex = serv['multiplex']
+            serv_network = serv['network']
+            serv_channel = serv['channel']
+            services_uuid.append(serv_uuid)
+            if serv_channel != []:
+                services_chan.append(serv_uuid)
+                serv_list = serv_network + ' / ' + serv_multiplex + ' / ' + serv_name + '  ** MAPPED **'
+            else:
+                serv_list = serv_network + ' / ' + serv_multiplex + ' / ' + serv_name
+            services_list.append(serv_list)
+        serv_preselect = [i for i, item in enumerate(services_uuid) if item not in set(services_chan)]
+        sel_service = dialog.multiselect('Select which services to map to channels', options=services_list, preselect=serv_preselect)
+        if sel_service == [] or sel_service == None:
+            services_param_load()
+        else:
+            for sel in sel_service:
+                services_sel.append(services_uuid[sel])
+            services_node['services'] = services_sel
+            serv_node_str = json.dumps(services_node)
+            serv_update_url = 'http://' + tvh_url + ':' + tvh_port + '/api/service/mapper/save?node=' + serv_node_str
+            serv_update_load = requests.get(serv_update_url)
+            status_url = 'http://' + tvh_url + ':' + tvh_port + '/api/service/mapper/status'
+            time.sleep(3)
+            map_status = requests.get(status_url).json()
+            map_total_num = map_status['total']
+            map_ok_num = map_status['ok']
+            map_fail_num = map_status['fail']
+            map_ignore_num = map_status['ignore']
+            map_complete = (map_ok_num + map_fail_num + map_ignore_num)
+            map_total_perc = ((float(map_complete) / float(serv_total)) * 100)
+            dialog.ok("Channel mapping complete.", str(map_ok_num) + " new channels added.", str(map_ignore_num) + " services ignored.", str(map_fail_num) + " services failed.")
+    if sel_param > 1:
+        serv_param_name = services_opt_label[sel_param]
+        serv_param_id = services_opt_id[sel_param]
+        serv_param_desc = serv_param_name + ': Select to Enable/Disable'
+        sel_param_edit = dialog.select(serv_param_desc, list=enabledisable)
+        if sel_param_edit >= 0:
+            if sel_param_edit == 0:
+                services_node[serv_param_id] = True
+            if sel_param_edit == 1:
+                services_node[serv_param_id] = False
+            services_node['services'] = ''
+            serv_node_str = json.dumps(services_node)
+            serv_update_url = 'http://' + tvh_url + ':' + tvh_port + '/api/service/mapper/save?node=' + serv_node_str
+            serv_update_load = requests.get(serv_update_url)
+        services_param_load()
+
 def start_scan(net_uuid_sel):
     adapters_url = 'http://' + tvh_url + ':' + tvh_port + '/api/hardware/tree?uuid=root'
     adapters_get = requests.get(adapters_url).json()
@@ -2593,29 +2705,7 @@ def mux_scan():
 
 @plugin.route('/services')
 def services():
-    if dialog.yesno("Map Services to Channels", "Would you like to try to map all services to channels?"):
-        serv_url = 'http://' + tvh_url + ':' + tvh_port + '/api/mpegts/service/grid?limit=999999999&sort=multiplex'
-        services = requests.get(serv_url).json()
-        serv_total = services['total']
-        serv_uuid = []
-        for serv_id in services['entries']:
-            if serv_id['channel'] == []:
-                serv_uuid.append(serv_id['uuid'])
-        serv_uuid_str = str(serv_uuid)
-        serv_uuid_str = re.sub("u\'","\"",serv_uuid_str)
-        serv_uuid_str = re.sub("\'","\"",serv_uuid_str)
-        map_url = 'http://' + tvh_url + ':' + tvh_port + '/api/service/mapper/save?node={"services":' + serv_uuid_str + ',"encrypted":false,"merge_same_name":false,"check_availability":false,"type_tags":true,"provider_tags":false,"network_tags":false}'
-        map_ch =  requests.get(map_url)
-        status_url = 'http://' + tvh_url + ':' + tvh_port + '/api/service/mapper/status'
-        time.sleep(3)
-        map_status = requests.get(status_url).json()
-        map_total_num = map_status['total']
-        map_ok_num = map_status['ok']
-        map_fail_num = map_status['fail']
-        map_ignore_num = map_status['ignore']
-        map_complete = (map_ok_num + map_fail_num + map_ignore_num)
-        map_total_perc = ((float(map_complete) / float(serv_total)) * 100)
-        dialog.ok("Channel mapping complete.", str(map_ok_num) + " new channels added.", str(map_ignore_num) + " services ignored.", str(map_fail_num) + " services failed.")
+    services_param_load()
 
 @plugin.route('/channels')
 def channels():
