@@ -22,18 +22,18 @@ import xbmc,xbmcaddon,xbmcvfs,xbmcgui,xbmcplugin
 import subprocess
 from subprocess import Popen
 from xbmcswift2 import Plugin
-import StringIO
+import io
 import os
 import re
 import requests
 import sys
 import json
-import urllib2
+import urllib.request, urllib.error, urllib.parse
 import time
 import ast
 import zipfile
 import datetime
-import urllib
+import urllib.request, urllib.parse, urllib.error
 import picons
 
 plugin = Plugin()
@@ -228,7 +228,7 @@ def ZipDir(inputDir, outputZip):
                 if os.path.islink(fullPath):
                     zipInfo = zipfile.ZipInfo(archiveRoot)
                     zipInfo.create_system = 3
-                    zipInfo.external_attr = 2716663808L
+                    zipInfo.external_attr = 2716663808
                     zipOut.writestr(zipInfo, os.readlink(fullPath))
                 else:
                     zipOut.write(fullPath, archiveRoot, zipfile.ZIP_DEFLATED)
@@ -551,9 +551,9 @@ def muxes_load(net_uuid_sel):
         except:
             for mux_f in muxes['entries']:
                 muxes_frequency.append(mux_f['channel_number'])
-        muxes_full = zip(muxes_name, muxes_network,)
+        muxes_full = list(zip(muxes_name, muxes_network,))
         muxes_list = ["%s %s" % x for x in muxes_full]
-        muxes_frequency, muxes_list, muxes_uuid = zip(*sorted(zip(muxes_frequency, muxes_list, muxes_uuid)))
+        muxes_frequency, muxes_list, muxes_uuid = list(zip(*sorted(zip(muxes_frequency, muxes_list, muxes_uuid))))
         create_mux = "CREATE NEW MUX"
         muxes_list = list(muxes_list)
         muxes_list.insert(0,create_mux)
@@ -1178,7 +1178,7 @@ def ch_param_edit(ch_uuid_sel, ch_info_list, ch_enabled, ch_autoname, ch_name, c
             epg_list_text = [x['names'] for x in epg_grid_load['entries']]
             epg_list_id = [x['id'] for x in epg_grid_load['entries']]
             epg_list_uuid = [x['uuid'] for x in epg_grid_load['entries']]
-            epg_list_full = zip(epg_list_text, epg_list_id)
+            epg_list_full = list(zip(epg_list_text, epg_list_id))
             epg_list_list = ["%s  -  %s" % x for x in epg_list_full]
             sel_epg = dialog.select('Select EPG source for channel: ' + str(ch_number) + " " + str(ch_name), list=epg_list_list)
             if sel_epg < 0:
@@ -1223,13 +1223,13 @@ def cron_edit(epg_intcron):
     if cron_edit_sel:
         cron_sel_weekday = dialog.select('Select which day(s) to run the grabber', list=cron_def_weekday_list)
         if cron_sel_weekday >= 0:
-            cron_new_weekday = cron_def_weekday.keys()[cron_def_weekday.values().index(cron_def_weekday_list[cron_sel_weekday])]
+            cron_new_weekday = list(cron_def_weekday.keys())[list(cron_def_weekday.values()).index(cron_def_weekday_list[cron_sel_weekday])]
         cron_sel_hour = dialog.select('Select which hour(s) to run the grabber', list=cron_def_split_hour_list)
         if cron_sel_hour == 0:
             cron_sel_hour_spec = dialog.select('Select which hour(s) to run the grabber', list=cron_def_hours)
             cron_new_hour = cron_sel_hour_spec
         if cron_sel_hour > 0:
-            cron_new_hour = cron_def_split_hour.keys()[cron_def_split_hour.values().index(cron_def_split_hour_list[cron_sel_hour])]
+            cron_new_hour = list(cron_def_split_hour.keys())[list(cron_def_split_hour.values()).index(cron_def_split_hour_list[cron_sel_hour])]
         cron_new_min = dialog.input('Enter the minutes after the hour to run the grabber', defaultt='0', type=xbmcgui.INPUT_NUMERIC)
         cron_update = str(cron_new_min) + ' ' + str(cron_new_hour) + ' ' + cron_new_weekday + ' * *'
         return cron_update
@@ -1309,7 +1309,7 @@ def epgmod_list_load():
         epg_modlist_enabled.append(str(e['status']))
     epg_modlist_enabled = [w.replace('epggrabmodNone', ' ** DISABLED **') for w in epg_modlist_enabled]
     epg_modlist_enabled = [w.replace('epggrabmodEnabled', ' ') for w in epg_modlist_enabled]
-    epg_modlist_full = zip(epg_modlist_name, epg_modlist_enabled)
+    epg_modlist_full = list(zip(epg_modlist_name, epg_modlist_enabled))
     epg_modlist_list = ["%s %s" % x for x in epg_modlist_full]
     epg_modlist_list, epg_modlist_uuid = (list(t) for t in zip(*sorted(zip(epg_modlist_list, epg_modlist_uuid))))
     sel_epgmod = dialog.select('Select an EPG grabber module to configure', list=epg_modlist_list)
@@ -2644,7 +2644,7 @@ def adapters():
             adapter_enabled.append(str(adapter_e['params'][0]['value']))
     adapter_enabled = [w.replace('False', ' ** DISABLED **') for w in adapter_enabled]
     adapter_enabled = [w.replace('True', ' ') for w in adapter_enabled]
-    adapters_full = zip(adapter_text, adapter_enabled)
+    adapters_full = list(zip(adapter_text, adapter_enabled))
     adapters_list = ["%s %s" % x for x in adapters_full]
     sel_adapter = dialog.select('Select which adapter you would like to configure', list=adapters_list)
     if sel_adapter >= 0:
@@ -2722,7 +2722,7 @@ def channels():
         channels_enabled.append(str(ch_e['enabled']))
     channels_enabled = [w.replace('False', ' ** DISABLED **') for w in channels_enabled]
     channels_enabled = [w.replace('True', ' ') for w in channels_enabled]
-    channels_full = zip(channels_name, channels_enabled)
+    channels_full = list(zip(channels_name, channels_enabled))
     channels_list = ["%s %s" % x for x in channels_full]
     sel_ch = dialog.select('Select a channel to configure', list=channels_list)
     if sel_ch >= 0:
@@ -2987,73 +2987,73 @@ def index():
     items.append(
     {
         'label': 'Adapters Configuration',
-        'path': plugin.url_for(u'adapters'),
+        'path': plugin.url_for('adapters'),
         'thumbnail':get_icon_path('adapter'),
     })
     items.append(
     {
         'label': 'Networks Configuration',
-        'path': plugin.url_for(u'networks'),
+        'path': plugin.url_for('networks'),
         'thumbnail':get_icon_path('antenna'),
     })
     items.append(
     {
         'label': 'Muxes Configuration',
-        'path': plugin.url_for(u'muxes'),
+        'path': plugin.url_for('muxes'),
         'thumbnail':get_icon_path('signal'),
     })
     items.append(
     {
         'label': 'Channels Configuration',
-        'path': plugin.url_for(u'channels'),
+        'path': plugin.url_for('channels'),
         'thumbnail':get_icon_path('numlist'),
     })
     items.append(
     {
         'label': 'Scan for New Channels',
-        'path': plugin.url_for(u'mux_scan'),
+        'path': plugin.url_for('mux_scan'),
         'thumbnail':get_icon_path('frequency'),
     })
     items.append(
     {
         'label': 'Map Services to Channels',
-        'path': plugin.url_for(u'services'),
+        'path': plugin.url_for('services'),
         'thumbnail':get_icon_path('folder'),
     })
     items.append(
     {
         'label': 'EPG Grabber Configuration',
-        'path': plugin.url_for(u'epg'),
+        'path': plugin.url_for('epg'),
         'thumbnail':get_icon_path('list'),
     })
     items.append(
     {
         'label': 'DVR Configuration',
-        'path': plugin.url_for(u'dvr'),
+        'path': plugin.url_for('dvr'),
         'thumbnail':get_icon_path('dvr'),
     })
     items.append(
     {
         'label': 'Conditional Access Clients',
-        'path': plugin.url_for(u'cas'),
+        'path': plugin.url_for('cas'),
         'thumbnail':get_icon_path('cas'),
     })
     items.append(
     {
         'label': 'Tvh Base Configuration & Backup',
-        'path': plugin.url_for(u'tvh'),
+        'path': plugin.url_for('tvh'),
         'thumbnail':get_icon_path('settings'),
     })
     items.append(
     {
         'label': 'Start Wizard',
-        'path': plugin.url_for(u'wizard'),
+        'path': plugin.url_for('wizard'),
         'thumbnail':get_icon_path('wand'),
     })
     items.append(
     {
         'label': 'Tvheadend Backend: ' + tvh_url + ':' + tvh_port,
-        'path': plugin.url_for(u'tvhclient'),
+        'path': plugin.url_for('tvhclient'),
         'thumbnail':get_icon_path('server'),
     })
 

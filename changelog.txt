@@ -1,3 +1,6 @@
+v3.0 (2021-07-14)
+ - convert to Python 3
+
 v2.1 (2018-01-04)
  - add support for mapping selected services to channels
 

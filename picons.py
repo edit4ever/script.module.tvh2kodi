@@ -19,9 +19,9 @@
 ################################################################################
 
 import os, xbmc, xbmcaddon, xbmcgui
-import json, urllib, urllib2, subprocess, time, zipfile
+import json, urllib.request, urllib.parse, urllib.error, urllib.request, urllib.error, urllib.parse, subprocess, time, zipfile
 import shutil, datetime, sys
-from urlparse import urlparse
+from urllib.parse import urlparse
 from os.path import splitext
 
 addon       = xbmcaddon.Addon(id='script.module.tvh2kodi')
@@ -34,7 +34,7 @@ tempfolder  = os.path.join(addondata, 'temp/')
 picons_dest = xbmc.translatePath(xbmcaddon.Addon().getSetting('pdest'))
 pdest       = os.path.join(picons_dest)
 url_latest = 'http://cvh.libreelec.tv/picons/latest2.json'
-latest_json = urllib.urlopen(url_latest)
+latest_json = urllib.request.urlopen(url_latest)
 log_json    = os.path.join(addondata, 'data/log.json')
 log3rdparty = os.path.join(addondata, 'data/3rdparty.log')
 logfile     = os.path.join(addondata, 'data')
@@ -114,16 +114,16 @@ def delete_file(path):
 def subprocess_cmd(command):
     process = subprocess.Popen(command,stdout=subprocess.PIPE, shell=True)
     proc_stdout = process.communicate()[0].strip()
-    print proc_stdout
+    print(proc_stdout)
 
 def downloader(url,dest, header):
     dp.create(header,"Downloading","Please Wait...")
-    urllib.urlretrieve(url,dest,lambda nb, bs, fs, url=url: _pbhook(nb,bs,fs,url,dp))
+    urllib.request.urlretrieve(url,dest,lambda nb, bs, fs, url=url: _pbhook(nb,bs,fs,url,dp))
 
 def _pbhook(numblocks, blocksize, filesize, url=None,dp=None):
     try:
         percent = min((numblocks*blocksize*100)/filesize, 100)
-        print percent
+        print(percent)
         dp.update(percent)
     except:
         percent = 100
@@ -164,8 +164,8 @@ def extract_zip(_in, _out, dp, header):
             update = count / nFiles * 100
             dp.update(int(update))
             zin.extract(item, _out)
-    except Exception, e:
-        print str(e)
+    except Exception as e:
+        print(str(e))
         return False
     return True
 
@@ -175,7 +175,7 @@ def picons_get(url_base, urljson, picons_file):
         picons_file_ext = picons_file + ".tar.zst"
         packageFile = os.path.join(tempfolder, picons_file_ext)
         url = url_base + ".tar.zst"
-        check_file = urllib.urlopen(url)
+        check_file = urllib.request.urlopen(url)
         if check_file.getcode() == 200:
             downloader(url,packageFile,header)
             create_directories(pdest)
@@ -195,7 +195,7 @@ def picons_get(url_base, urljson, picons_file):
         picons_file_ext = picons_file + ".tar.xz"
         packageFile = os.path.join(tempfolder, picons_file_ext)
         url = url_base + ".tar.xz"
-        check_file = urllib.urlopen(url)
+        check_file = urllib.request.urlopen(url)
         if check_file.getcode() == 200:
             downloader(url,packageFile,header)
             create_directories(pdest)
